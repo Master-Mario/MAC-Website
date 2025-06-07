@@ -16,7 +16,7 @@ jobs:
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: mac-netzwerk.net
-        username: mario
+        username: sinnreich
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: 22
         script: |
