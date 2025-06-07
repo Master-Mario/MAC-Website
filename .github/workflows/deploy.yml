@@ -17,10 +17,10 @@ jobs:
       with:
         host: mac-netzwerk.net
         username: mario
-        key: ${{ secrets.MAC_VPS_SSH_KEY }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: 22
         script: |
-          echo "🌐 Deploying MAC-Netzwerk Website..."
+          echo "Deploying MAC-Netzwerk Website..."
           
           # Ins Website-Verzeichnis (Apache DocumentRoot)
           cd ~/html/mac-netzwerk.net
@@ -37,5 +37,5 @@ jobs:
           find . -type f -name "*.svg" -exec chmod 644 {} \;
           find . -type d -exec chmod 755 {} \;
           
-          echo "✅ MAC-Netzwerk Website deployed!"
-          echo "🌐 Live unter: https://mac-netzwerk.net"
+          echo "MAC-Netzwerk Website deployed!"
+          echo "Live unter: https://mac-netzwerk.net"
