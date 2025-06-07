@@ -9,17 +9,33 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - name: Checkout Website
+      uses: actions/checkout@v4
     
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.7.0
+    - name: Deploy to MAC-Netzwerk VPS
+      uses: appleboy/ssh-action@v1.0.3
       with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-    
-    - name: Deploy to VPS
-      run: |
-        ssh -o StrictHostKeyChecking=no sinnreich@mac-netzwerk.net << 'EOF'
-          cd /var/www/
+        host: mac-netzwerk.net
+        username: mario
+        key: ${{ secrets.MAC_VPS_SSH_KEY }}
+        port: 22
+        script: |
+          echo "🌐 Deploying MAC-Netzwerk Website..."
+          
+          # Ins Website-Verzeichnis (Apache DocumentRoot)
+          cd ~/html/mac-netzwerk.net
+          
+          # Website aktualisieren
           git pull origin main
-        EOF
+          
+          # Korrekte Dateirechte für Apache setzen
+          find . -type f -name "*.html" -exec chmod 644 {} \;
+          find . -type f -name "*.css" -exec chmod 644 {} \;
+          find . -type f -name "*.js" -exec chmod 644 {} \;
+          find . -type f -name "*.png" -exec chmod 644 {} \;
+          find . -type f -name "*.jpg" -exec chmod 644 {} \;
+          find . -type f -name "*.svg" -exec chmod 644 {} \;
+          find . -type d -exec chmod 755 {} \;
+          
+          echo "✅ MAC-Netzwerk Website deployed!"
+          echo "🌐 Live unter: https://mac-netzwerk.net"
