@@ -19,11 +19,7 @@ jobs:
     
     - name: Deploy to VPS
       run: |
-        ssh -o StrictHostKeyChecking=no user@your-vps-ip << 'EOF'
-          cd /var/www/your-website
+        ssh -o StrictHostKeyChecking=no sinnreich@mac-netzwerk.net << 'EOF'
+          cd /var/www/
           git pull origin main
-          # Hier können Sie weitere Befehle hinzufügen, z.B.:
-          # npm install (falls Node.js Website)
-          # composer install (falls PHP)
-          # systemctl restart nginx
         EOF
