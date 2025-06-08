@@ -24,10 +24,10 @@ jobs:
           echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S -v
           
           # Ins Website-Verzeichnis (Apache DocumentRoot)
-          cd /var/www/html/
+          cd /var/www/html/MAC-Website
           
           # Website aktualisieren
-          sudo git clone https://github.com/MarioSinnreich/MAC-Website
+          git pull
           
           # Korrekte Dateirechte für Apache setzen
           find . -type f -name "*.html" -exec chmod 644 {} \;
