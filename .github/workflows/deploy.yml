@@ -21,12 +21,13 @@ jobs:
         port: 22
         script: |
           echo "Deploying MAC-Netzwerk Website..."
+          echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S -v
           
           # Ins Website-Verzeichnis (Apache DocumentRoot)
           cd /var/www/html/
           
           # Website aktualisieren
-          git clone https://github.com/MarioSinnreich/MAC-Website
+          sudo git clone https://github.com/MarioSinnreich/MAC-Website
           
           # Korrekte Dateirechte für Apache setzen
           find . -type f -name "*.html" -exec chmod 644 {} \;
