@@ -3,7 +3,9 @@ const session = require('express-session');
 const axios = require('axios');
 const cors = require('cors');
 const { createClient } = require('redis'); // Redis-Client importieren
-const RedisStore = require('connect-redis').default; // connect-redis importieren
+// const RedisStore = require('connect-redis').default; // Alte Importmethode
+const connectRedis = require('connect-redis'); // Import für connect-redis
+const RedisStore = connectRedis(session); // RedisStore mit session initialisieren
 
 const app = express();
 
@@ -20,7 +22,8 @@ app.use(cors({ origin: frontend_url, credentials: true }));
 // Stellen Sie sicher, dass Redis läuft und über REDIS_URL erreichbar ist,
 // oder passen Sie die URL entsprechend an.
 const redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379'
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    legacyMode: true // Hinzugefügt für Kompatibilität von connect-redis v6 mit redis v4
 });
 
 redisClient.on('error', function (err) {
