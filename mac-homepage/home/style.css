@@ -38,6 +38,7 @@ nav.scrolled {
 }
 
 .logo {
+    padding-right: 10vw;
     font-size: 1.8rem;
     font-weight: bold;
     color: #ff0023;
