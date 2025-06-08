@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function checkAuthStatus() {
         try {
-            const response = await fetch('http://localhost:3000/api/auth/status', {
+            const response = await fetch('/api/auth/status', { // Geändert zu relativem Pfad
                 credentials: 'include' // Wichtig für Cookies/Sessions
             });
             if (!response.ok) {
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             try {
-                const response = await fetch('http://localhost:3000/logout', {
+                const response = await fetch('/logout', { // Geändert zu relativem Pfad
                     method: 'GET',
                     credentials: 'include'
                 });
