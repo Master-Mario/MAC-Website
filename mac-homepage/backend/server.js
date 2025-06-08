@@ -2,6 +2,9 @@ const express = require('express');
 const session = require('express-session');
 const axios = require('axios');
 const cors = require('cors');
+const { createClient } = require('redis'); // Redis-Client importieren
+const RedisStore = require('connect-redis').default; // connect-redis importieren
+
 const app = express();
 
 app.set('trust proxy', 1); // Trust first proxy
@@ -13,15 +16,41 @@ const discord_redirect_uri = 'https://mac-netzwerk.net/login/callback';
 // CORS-Middleware verwenden
 app.use(cors({ origin: frontend_url, credentials: true }));
 
+// Redis Client Initialisierung
+// Stellen Sie sicher, dass Redis läuft und über REDIS_URL erreichbar ist,
+// oder passen Sie die URL entsprechend an.
+const redisClient = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+redisClient.on('error', function (err) {
+    console.error('[Redis] Could not connect to Redis:', err);
+});
+
+redisClient.on('connect', function () {
+    console.log('[Redis] Connected to Redis.');
+});
+
+(async () => {
+    try {
+        await redisClient.connect();
+    } catch (err) {
+        console.error('[Redis] Client connection error:', err);
+    }
+})();
+
+
+// Session-Konfiguration mit RedisStore
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo', // UNBEDINGT IN PRODUKTION DURCH EINE SICHERE UMWELTSVARIABLE ERSETZEN!
+    store: new RedisStore({ client: redisClient, prefix: 'macsess:' }), // Redis als Session-Speicher
+    secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION', // SEHR WICHTIG: In Produktion durch eine sichere Umgebungsvariable ersetzen!
     resave: false,
-    saveUninitialized: false, // Geändert zu false für Produktion
+    saveUninitialized: false, // Empfohlen für Produktion, keine leeren Sessions speichern
     cookie: {
         secure: true, // In Produktion immer true (HTTPS)
         httpOnly: true,
-        sameSite: 'lax',
-        path: '/', // Explizit den Cookie-Pfad setzen
+        sameSite: 'lax', // 'lax' oder 'none' (wenn 'none', dann secure: true zwingend)
+        path: '/',
         maxAge: 1000 * 60 * 60 * 24 // 1 Tag Lebensdauer für das Cookie
     }
 }));
