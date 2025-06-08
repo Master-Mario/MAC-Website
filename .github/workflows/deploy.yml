@@ -25,6 +25,7 @@ jobs:
           
           # Ins Website-Verzeichnis (Apache DocumentRoot)
           cd /var/www/html/MAC-Website
+          pm2 restart MAC-Backend
           
           # Website aktualisieren
           git pull
