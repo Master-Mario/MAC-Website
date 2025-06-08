@@ -15,7 +15,7 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: IS_PRODUCTION, // Cookie nur über HTTPS in Produktion senden
+        secure: true, // Cookie nur über HTTPS in Produktion senden
         httpOnly: true, // Verhindert Zugriff durch clientseitiges JavaScript
         sameSite: 'lax' // Schutz gegen CSRF
     }
@@ -25,15 +25,17 @@ const client_id = process.env.DISCORD_CLIENT_ID || '1381338008829165658';
 const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo'; // Secrets immer über Env Vars!
 
 // Discord Redirect URIs
-const local_discord_redirect_uri = 'http://localhost:3000/login/callback';
-const production_discord_redirect_uri = 'https://mac-netzwerk.net/login/callback'; // Passe dies an deine Produktions-Callback-URL an
-const discord_redirect_uri = IS_PRODUCTION ? production_discord_redirect_uri : local_discord_redirect_uri;
+const discord_redirect_uri = 'https://mac-netzwerk.net/login/callback';
 
 app.get('/login', (req, res) => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;
     res.redirect(url);
 });
 
+/**
+ * @param {import('express').Request & { session: import('express-session').Session & { user?: any } }} req
+ * @param {import('express').Response} res
+ */
 app.get('/login/callback', async (req, res) => {
     const code = req.query.code;
     const params = new URLSearchParams();
@@ -61,6 +63,10 @@ app.get('/login/callback', async (req, res) => {
     }
 });
 
+/**
+ * @param {import('express').Request & { session: import('express-session').Session & { user?: any } }} req
+ * @param {import('express').Response} res
+ */
 app.get('/logout', (req, res) => {
     req.session.destroy(err => {
         if (err) {
@@ -72,6 +78,10 @@ app.get('/logout', (req, res) => {
 });
 
 // Route, um den aktuellen Benutzerstatus zu prüfen
+/**
+ * @param {import('express').Request & { session: import('express-session').Session & { user?: any } }} req
+ * @param {import('express').Response} res
+ */
 app.get('/api/auth/status', (req, res) => {
     if (req.session.user) {
         res.json({ loggedIn: true, user: req.session.user });
@@ -81,6 +91,10 @@ app.get('/api/auth/status', (req, res) => {
 });
 
 // Beispiel für geschützte Seite
+/**
+ * @param {import('express').Request & { session: import('express-session').Session & { user?: any } }} req
+ * @param {import('express').Response} res
+ */
 app.get('/profile', (req, res) => {
     if (!req.session.user) return res.redirect('/login');
     res.send(`Hallo ${req.session.user.username}!`);
