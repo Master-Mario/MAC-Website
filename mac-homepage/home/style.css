@@ -442,6 +442,94 @@ footer {
     color: #ff0023;
 }
 
+/* Registrierungsformular */
+.registration-form {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-top: 2rem;
+    border: 1px solid rgba(255, 0, 35, 0.2);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.registration-form .form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.registration-form label {
+    display: block;
+    color: #cccccc;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.registration-form input[type="text"],
+.registration-form input[type="email"] {
+    width: 100%;
+    padding: 0.8rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 0, 35, 0.3);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 1rem;
+}
+
+.registration-form input[type="text"]:focus,
+.registration-form input[type="email"]:focus {
+    outline: none;
+    border-color: #ff0023;
+    box-shadow: 0 0 10px rgba(255, 0, 35, 0.3);
+}
+
+.registration-form .payment-placeholder {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px dashed rgba(255, 0, 35, 0.4);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    color: #aaaaaa;
+}
+
+.registration-form .payment-placeholder p {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+
+.registration-form .agb-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.registration-form .agb-checkbox input[type="checkbox"] {
+    width: auto;
+    accent-color: #ff0023;
+}
+
+.registration-form .agb-checkbox label {
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+.registration-form .agb-checkbox a {
+    color: #ff0023;
+    text-decoration: none;
+}
+
+.registration-form .agb-checkbox a:hover {
+    text-decoration: underline;
+}
+
+.registration-form button[type="submit"] {
+    width: 100%;
+    padding: 1rem;
+}
+
+
 /* Animations */
 @keyframes fadeInUp {
     from {
@@ -551,4 +639,3 @@ footer {
         font-size: 0.8rem;
     }
 }
-

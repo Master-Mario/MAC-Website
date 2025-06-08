@@ -15,6 +15,7 @@
                 <li><a href="index.html#home">Home</a></li>
                 <li><a href="index.html#server">Server</a></li>
                 <li><a href="#regeln">Regeln</a></li>
+                <li><a href="#mac-smp-registrierung">MAC-SMP Registrierung</a></li>
                 <li><a href="index.html#kontakt">Kontakt</a></li>
                 <li><a href="index.html#impressum">Impressum</a></li>
                 <li><a href="https://panel.mac-netzwerk.net/">Panel</a></li>
@@ -36,18 +37,18 @@
                 <p>mac-netzwerk.net</p>
             </div>
             <div class="cta-buttons">
-                <a href="#whitelist" class="btn btn-primary">Jetzt bewerben & bezahlen</a>
+                <a href="#mac-smp-registrierung" class="btn btn-primary">Jetzt für MAC-SMP registrieren</a>
             </div>
         </div>
     </section>
     <section style="max-width:900px;margin:0 auto;padding:2rem;">
         <h2 class="section-title">Was ist MAC-SMP?</h2>
-        <p>MAC-SMP ist ein privater, whitelisted Survival-Server für Minecraft Java Edition. Wir bieten eine freundliche, engagierte Community, regelmäßige Events, ein aktives Team und ein einzigartiges Spielerlebnis ohne Pay2Win. Um auf dem Server zu spielen, ist eine einmalige Whitelist-Gebühr erforderlich. Damit finanzieren wir Server, Infrastruktur und Community-Projekte.</p><br>
-        <h3>Wie funktioniert die Whitelist?</h3>
+        <p>MAC-SMP ist ein privater Survival-Server für Minecraft Java Edition. Wir bieten eine freundliche, engagierte Community, regelmäßige Events, ein aktives Team und ein einzigartiges Spielerlebnis ohne Pay2Win. Um auf dem Server zu spielen, ist eine Registrierung und die Beteiligung an den monatlichen Serverkosten erforderlich (siehe Abschnitt "Für MAC-SMP registrieren & Kosten"). Damit finanzieren wir Server, Infrastruktur und Community-Projekte.</p><br>
+        <h3>Wie funktioniert die Teilnahme?</h3>
         <ol>
-            <li>Du bezahlst die einmalige Whitelist-Gebühr (siehe unten).</li>
-            <li>Nach Zahlung wirst du automatisch oder manuell auf die Whitelist gesetzt.</li>
-            <li>Du erhältst Zugang zum MAC-SMP und kannst sofort loslegen!</li>
+            <li>Du registrierst dich über das Formular weiter unten auf dieser Seite.</li>
+            <li>Mit der Registrierung stimmst du der monatlichen Kostenbeteiligung zu.</li>
+            <li>Nach erfolgreicher Registrierung und Prüfung wirst du für den Server freigeschaltet und kannst sofort loslegen!</li>
         </ol>
     </section>
     <!-- Regeln Section -->
@@ -110,11 +111,38 @@
             </div>
         </div>
     </section>
-    <section id="whitelist" style="max-width:600px;margin:0 auto 3rem auto;padding:2rem;text-align:center;">
-        <h2 class="section-title">Whitelist-Beitritt</h2>
-        <p>Um auf MAC-SMP zu spielen, ist eine einmalige Gebühr von <strong>5€</strong> zu entrichten.<br>Nach Zahlung wirst du auf die Whitelist gesetzt (Bearbeitung meist innerhalb weniger Minuten, max. 24h).</p>
-        <a href="https://www.paypal.com/paypalme/macsmp/5" class="btn btn-primary" target="_blank">Jetzt 5€ bezahlen & whitelisten lassen</a>
-        <p style="margin-top:1rem;font-size:0.95rem;color:#ccc;">Bei Fragen oder Problemen schreibe an <a href="mailto:mario@mac-netzwerk.net">mario@mac-netzwerk.net</a> oder im <a href="https://discord.gg/FusjxDz7yb" target="_blank">Discord</a>.</p>
+    <section id="mac-smp-registrierung" style="max-width:700px;margin:3rem auto;padding:2rem;">
+        <h2 class="section-title">Für MAC-SMP registrieren & Kosten</h2>
+        <p style="text-align:center; margin-bottom:2rem; color: #cccccc;">Registriere dich hier, um auf unserem exklusiven MAC-SMP Server zu spielen und Teil der Community zu werden.</p>
+
+        <form id="registrationForm" class="registration-form">
+            <div class="form-group">
+                <label for="minecraftUsername">Minecraft-Username</label>
+                <input type="text" id="minecraftUsername" name="minecraftUsername" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">E-Mail-Adresse</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <h3>Zahlungsinformationen & Kostenmodell</h3>
+                <p>Die Kosten für MAC-SMP (aktuell z.B. 10€/Monat Serverkosten) werden fair auf alle aktiven Spieler aufgeteilt. Bei 5 Spielern wären das 2€ pro Spieler. Wenn du im laufenden Monat beitrittst, zahlst du nur anteilig für die verbleibende Zeit (z.B. bei Einstieg zur Monatsmitte nur 1€ für den ersten Monat). Die anderen Spieler tragen in diesem Fall für diesen Monat einen entsprechend leicht höheren Anteil. Die Abbuchung erfolgt am Monatsende.</p>
+                <!-- Hier würden Stripe/PayPal Elemente integriert -->
+                <div class="payment-placeholder">
+                    <p>Platzhalter für Stripe/PayPal Zahlungselemente</p>
+                    <p>Beispiel: Kreditkartendetails oder PayPal-Button</p>
+                </div>
+            </div>
+
+            <div class="form-group agb-checkbox">
+                <input type="checkbox" id="agb" name="agb" required>
+                <label for="agb">Ich stimme den <a href="agb.html" target="_blank">AGB</a> und der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a> zu.</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Jetzt kostenpflichtig für MAC-SMP registrieren</button>
+        </form>
     </section>
     <footer>
         <div class="footer-links">
@@ -127,4 +155,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
