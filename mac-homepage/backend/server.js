@@ -36,7 +36,7 @@ const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ
 
 
 app.get('/login', (req, res) => {
-    const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;
+    const url = `https://discord.com/oauth2/authorize?client_id=1381338008829165658&response_type=code&redirect_uri=https%3A%2F%2Fmac-netzwerk.net%2Flogin%2Fcallback&scope=identify+email`;
     res.redirect(url);
 });
 
