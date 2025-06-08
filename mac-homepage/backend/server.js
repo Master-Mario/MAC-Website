@@ -53,8 +53,16 @@ app.get('/login/callback', async (req, res) => {
         });
 
         req.session.user = userRes.data;
-        // Erfolgreiche Weiterleitung zur Homepage im Frontend
-        res.redirect(frontend_url + '/');
+        // Stelle sicher, dass die Session gespeichert ist, bevor weitergeleitet wird
+        req.session.save(err => {
+            if (err) {
+                console.error('Session save error:', err);
+                // Fehlerseite im Frontend mit Parameter für spezifische Fehlermeldung
+                return res.redirect(frontend_url + '/login-failed.html?error=session_save_error');
+            }
+            // Erfolgreiche Weiterleitung zur Homepage im Frontend
+            res.redirect(frontend_url + '/');
+        });
     } catch (e) {
         console.error('Login callback error:', e.response ? e.response.data : e.message);
         // Fehlerseite im Frontend mit Parameter für spezifische Fehlermeldung
@@ -76,6 +84,10 @@ app.get('/logout', (req, res) => {
 });
 
 app.get('/api/auth/status', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
     if (req.session.user) {
         res.json({ loggedIn: true, user: req.session.user });
     } else {
