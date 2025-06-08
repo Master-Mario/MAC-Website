@@ -1,38 +1,51 @@
 const express = require('express');
 const session = require('express-session');
 const axios = require('axios');
-const cors = require('cors'); // CORS-Middleware importieren
+const cors = require('cors');
 const app = express();
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// Frontend URLs
+const local_frontend_url = 'http://localhost:5000'; // Passe den Port ggf. an deinen lokalen Frontend-Server an
+const production_frontend_url = 'https://mac-netzwerk.net'; // Deine Produktions-Frontend-URL
+const frontend_url = IS_PRODUCTION ? production_frontend_url : local_frontend_url;
+
 // CORS-Middleware verwenden
-// Passe die origin-Option an deine Frontend-URL an, wenn sie nicht auf Port 5173 läuft.
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: frontend_url, credentials: true }));
 
 app.use(session({
-    secret: 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo',
+    secret: process.env.SESSION_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo', // Verwende Umgebungsvariable für Secret in Produktion
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } // Für HTTPS auf true setzen
+    cookie: {
+        secure: IS_PRODUCTION, // Cookie nur über HTTPS in Produktion senden
+        httpOnly: true, // Verhindert Zugriff durch clientseitiges JavaScript
+        sameSite: 'lax' // Schutz gegen CSRF
+    }
 }));
 
-const client_id = '1381338008829165658';
-const client_secret = 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo';
-const redirect_uri = 'https://mac-netzwerk.net/login/callback';
+const client_id = process.env.DISCORD_CLIENT_ID || '1381338008829165658';
+const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo'; // Secrets immer über Env Vars!
+
+// Discord Redirect URIs
+const local_discord_redirect_uri = 'http://localhost:3000/login/callback';
+const production_discord_redirect_uri = 'https://mac-netzwerk.net/login/callback'; // Passe dies an deine Produktions-Callback-URL an
+const discord_redirect_uri = IS_PRODUCTION ? production_discord_redirect_uri : local_discord_redirect_uri;
 
 app.get('/login', (req, res) => {
-    const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(redirect_uri)}&response_type=code&scope=identify+email`;
+    const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;
     res.redirect(url);
 });
 
 app.get('/login/callback', async (req, res) => {
     const code = req.query.code;
-    // Token anfordern
     const params = new URLSearchParams();
     params.append('client_id', client_id);
     params.append('client_secret', client_secret);
     params.append('grant_type', 'authorization_code');
     params.append('code', code);
-    params.append('redirect_uri', redirect_uri);
+    params.append('redirect_uri', discord_redirect_uri); // Verwende die dynamische Discord-Redirect-URI
 
     try {
         const tokenRes = await axios.post('https://discord.com/api/oauth2/token', params, {
@@ -40,16 +53,15 @@ app.get('/login/callback', async (req, res) => {
         });
         const access_token = tokenRes.data.access_token;
 
-        // User-Info holen
         const userRes = await axios.get('https://discord.com/api/users/@me', {
             headers: { Authorization: `Bearer ${access_token}` }
         });
 
         req.session.user = userRes.data;
-        res.redirect('http://localhost:5173/'); // Weiterleitung zum Frontend
+        res.redirect(frontend_url + '/'); // Weiterleitung zum dynamischen Frontend
     } catch (e) {
-        console.error('Login callback error:', e);
-        res.redirect('http://localhost:5173/login-failed'); // Eigene Fehlerseite im Frontend
+        console.error('Login callback error:', e.response ? e.response.data : e.message);
+        res.redirect(frontend_url + '/login-failed.html'); // Weiterleitung zur dynamischen Fehlerseite im Frontend
     }
 });
 
