@@ -4,12 +4,8 @@ const axios = require('axios');
 const cors = require('cors');
 const app = express();
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-// Frontend URLs
-const local_frontend_url = 'http://localhost:5000'; // Passe den Port ggf. an deinen lokalen Frontend-Server an
-const production_frontend_url = 'https://mac-netzwerk.net'; // Deine Produktions-Frontend-URL
-const frontend_url = IS_PRODUCTION ? production_frontend_url : local_frontend_url;
+// Frontend URLs/ Deine Produktions-Frontend-URL
+const frontend_url = 'https://mac-netzwerk.net';
 
 // CORS-Middleware verwenden
 app.use(cors({ origin: frontend_url, credentials: true }));
