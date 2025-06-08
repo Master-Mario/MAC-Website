@@ -26,7 +26,7 @@ jobs:
           cd /var/www/html/
           
           # Website aktualisieren
-          git pull origin main
+          git clone https://github.com/MarioSinnreich/MAC-Website
           
           # Korrekte Dateirechte für Apache setzen
           find . -type f -name "*.html" -exec chmod 644 {} \;
