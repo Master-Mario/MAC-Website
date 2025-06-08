@@ -23,7 +23,7 @@ jobs:
           echo "Deploying MAC-Netzwerk Website..."
           
           # Ins Website-Verzeichnis (Apache DocumentRoot)
-          cd /var/html/
+          cd /var/www/html/
           
           # Website aktualisieren
           git pull origin main
