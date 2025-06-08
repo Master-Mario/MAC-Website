@@ -4,8 +4,18 @@ const axios = require('axios');
 const cors = require('cors');
 const app = express();
 
-// Frontend URLs/ Deine Produktions-Frontend-URL
-const frontend_url = 'https://mac-netzwerk.net';
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+// Frontend URLs
+const PROD_FRONTEND_URL = 'https://mac-netzwerk.net';
+const DEV_FRONTEND_URL = 'http://localhost:5500'; // Passen Sie diesen Port ggf. an
+const frontend_url = IS_PROD ? PROD_FRONTEND_URL : DEV_FRONTEND_URL;
+
+// Discord Redirect URIs
+const PROD_DISCORD_REDIRECT_URI = 'https://mac-netzwerk.net/login/callback';
+const DEV_DISCORD_REDIRECT_URI = 'http://localhost:3000/login/callback'; // Muss in Discord Dev Portal für lokale Tests hinterlegt sein
+const discord_redirect_uri = IS_PROD ? PROD_DISCORD_REDIRECT_URI : DEV_DISCORD_REDIRECT_URI;
+
 
 // CORS-Middleware verwenden
 app.use(cors({ origin: frontend_url, credentials: true }));
@@ -15,7 +25,7 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: true, // Cookie nur über HTTPS in Produktion senden
+        secure: IS_PROD, // true in Produktion (HTTPS), false in Entwicklung (HTTP)
         httpOnly: true, // Verhindert Zugriff durch clientseitiges JavaScript
         sameSite: 'lax' // Schutz gegen CSRF
     }
@@ -24,8 +34,6 @@ app.use(session({
 const client_id = process.env.DISCORD_CLIENT_ID || '1381338008829165658';
 const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo'; // Secrets immer über Env Vars!
 
-// Discord Redirect URIs
-const discord_redirect_uri = 'https://mac-netzwerk.net/login/callback';
 
 app.get('/login', (req, res) => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;
@@ -43,7 +51,7 @@ app.get('/login/callback', async (req, res) => {
     params.append('client_secret', client_secret);
     params.append('grant_type', 'authorization_code');
     params.append('code', code);
-    params.append('redirect_uri', discord_redirect_uri); // Verwende die dynamische Discord-Redirect-URI
+    params.append('redirect_uri', discord_redirect_uri); // Verwendet jetzt die dynamische discord_redirect_uri
 
     try {
         const tokenRes = await axios.post('https://discord.com/api/oauth2/token', params, {
@@ -56,7 +64,7 @@ app.get('/login/callback', async (req, res) => {
         });
 
         req.session.user = userRes.data;
-        res.redirect(frontend_url + '/'); // Weiterleitung zum dynamischen Frontend
+        res.redirect(frontend_url + '/'); // Weiterleitung zum dynamischen Frontend (z.B. http://localhost:5500/ oder https://mac-netzwerk.net/)
     } catch (e) {
         console.error('Login callback error:', e.response ? e.response.data : e.message);
         res.redirect(frontend_url + '/login-failed.html'); // Weiterleitung zur dynamischen Fehlerseite im Frontend
@@ -77,11 +85,6 @@ app.get('/logout', (req, res) => {
     });
 });
 
-// Route, um den aktuellen Benutzerstatus zu prüfen
-/**
- * @param {import('express').Request & { session: import('express-session').Session & { user?: any } }} req
- * @param {import('express').Response} res
- */
 app.get('/api/auth/status', (req, res) => {
     if (req.session.user) {
         res.json({ loggedIn: true, user: req.session.user });
@@ -90,14 +93,10 @@ app.get('/api/auth/status', (req, res) => {
     }
 });
 
-// Beispiel für geschützte Seite
-/**
- * @param {import('express').Request & { session: import('express-session').Session & { user?: any } }} req
- * @param {import('express').Response} res
- */
 app.get('/profile', (req, res) => {
     if (!req.session.user) return res.redirect('/login');
     res.send(`Hallo ${req.session.user.username}!`);
 });
 
-app.listen(3000, () => console.log('Server läuft auf Port 3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server läuft auf Port ${PORT}`));
