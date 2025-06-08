@@ -4,6 +4,8 @@ const axios = require('axios');
 const cors = require('cors');
 const app = express();
 
+app.set('trust proxy', 1); // Trust first proxy
+
 // Produktions-Konfiguration
 const frontend_url = 'https://mac-netzwerk.net';
 const discord_redirect_uri = 'https://mac-netzwerk.net/login/callback';
@@ -14,11 +16,13 @@ app.use(cors({ origin: frontend_url, credentials: true }));
 app.use(session({
     secret: process.env.SESSION_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo', // UNBEDINGT IN PRODUKTION DURCH EINE SICHERE UMWELTSVARIABLE ERSETZEN!
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // Geändert zu false für Produktion
     cookie: {
         secure: true, // In Produktion immer true (HTTPS)
         httpOnly: true,
-        sameSite: 'lax'
+        sameSite: 'lax',
+        path: '/', // Explizit den Cookie-Pfad setzen
+        maxAge: 1000 * 60 * 60 * 24 // 1 Tag Lebensdauer für das Cookie
     }
 }));
 
