@@ -529,6 +529,75 @@ footer {
     padding: 1rem;
 }
 
+/* NEU: Auth Section Styles */
+.auth-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto; /* Verschiebt es nach rechts vor das mobile Menü-Icon */
+}
+
+.user-info { /* Für den Fall, dass du später dynamisch umschaltest */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #e0e0e0;
+}
+
+.avatar { /* Für den Fall, dass du später dynamisch umschaltest */
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #ff0023;
+}
+
+.username { /* Für den Fall, dass du später dynamisch umschaltest */
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.btn-logout { /* Für den Fall, dass du später dynamisch umschaltest */
+  background-color: transparent;
+  color: #ff4757;
+  border: 1px solid #ff4757;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+  background-color: #ff4757;
+  color: white;
+}
+
+.btn-discord-login {
+  background-color: #5865F2;
+  color: white;
+  padding: 8px 15px;
+  font-size: 0.9rem;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.btn-discord-login svg {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.btn-discord-login:hover {
+  background-color: #4752C4;
+}
+/* ENDE NEU: Auth Section Styles */
+
 
 /* Animations */
 @keyframes fadeInUp {
@@ -571,53 +640,29 @@ footer {
 @media (max-width: 767px) {
     .nav-links {
         display: none;
+        /* Wichtig: Damit das mobile Menü korrekt funktioniert, wenn es per JS eingeblendet wird */
+        flex-direction: column;
+        position: absolute;
+        top: 100%; /* Direkt unter der Navbar */
+        left: 0;
+        width: 100%;
+        background: rgba(0, 0, 0, 0.98);
+        padding: 1rem 0;
+        text-align: center;
+        gap: 1rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
 
     .mobile-menu {
         display: flex;
+        order: 2; /* Mobile menu icon to the very right */
     }
 
-    .hero h1 {
-        font-size: 2.5rem;
-    }
-
-    .hero p {
-        font-size: 1.1rem;
-    }
-
-    .cta-buttons {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .servers-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .rules-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-
-    .rules-column {
-        padding: 1.2rem;
-        min-height: auto;
-    }
-
-    .rules-column h3 {
-        font-size: 1.2rem;
-        margin-bottom: 1rem;
-    }
-
-    .rules-list li {
-        padding: 0.6rem;
-        font-size: 0.85rem;
-        margin: 0.5rem 0;
-    }
-
-    .rules-note {
-        padding: 1rem;
-        margin-top: 1.5rem;
+    /* Anpassung für Auth Section auf Mobile */
+    .auth-section {
+        order: 1; /* Auth section before mobile menu icon */
+        /* margin-left: auto; already there, good */
+        padding-right: 10px; /* Abstand zum mobilen Menü-Icon */
     }
 }
 
