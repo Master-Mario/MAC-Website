@@ -4,54 +4,43 @@ const axios = require('axios');
 const cors = require('cors');
 const app = express();
 
-const IS_PROD = process.env.NODE_ENV === 'production';
-
-// Frontend URLs
-const PROD_FRONTEND_URL = 'https://mac-netzwerk.net';
-const DEV_FRONTEND_URL = 'http://localhost:5500'; // Passen Sie diesen Port ggf. an
-const frontend_url = IS_PROD ? PROD_FRONTEND_URL : DEV_FRONTEND_URL;
-
-// Discord Redirect URIs
-const PROD_DISCORD_REDIRECT_URI = 'https://mac-netzwerk.net/login/callback';
-const DEV_DISCORD_REDIRECT_URI = 'http://localhost:3000/login/callback'; // Muss in Discord Dev Portal für lokale Tests hinterlegt sein
-const discord_redirect_uri = IS_PROD ? PROD_DISCORD_REDIRECT_URI : DEV_DISCORD_REDIRECT_URI;
-
+// Produktions-Konfiguration
+const frontend_url = 'https://mac-netzwerk.net';
+const discord_redirect_uri = 'https://mac-netzwerk.net/login/callback';
 
 // CORS-Middleware verwenden
 app.use(cors({ origin: frontend_url, credentials: true }));
 
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo', // Verwende Umgebungsvariable für Secret in Produktion
+    secret: process.env.SESSION_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo', // UNBEDINGT IN PRODUKTION DURCH EINE SICHERE UMWELTSVARIABLE ERSETZEN!
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: IS_PROD, // true in Produktion (HTTPS), false in Entwicklung (HTTP)
-        httpOnly: true, // Verhindert Zugriff durch clientseitiges JavaScript
-        sameSite: 'lax' // Schutz gegen CSRF
+        secure: true, // In Produktion immer true (HTTPS)
+        httpOnly: true,
+        sameSite: 'lax'
     }
 }));
 
-const client_id = process.env.DISCORD_CLIENT_ID || '1381338008829165658';
-const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo'; // Secrets immer über Env Vars!
-
+const client_id = process.env.DISCORD_CLIENT_ID || '1381338008829165658'; // Aus Umgebungsvariable laden
+const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo'; // Aus Umgebungsvariable laden
 
 app.get('/login', (req, res) => {
-    const url = `https://discord.com/oauth2/authorize?client_id=1381338008829165658&response_type=code&redirect_uri=https%3A%2F%2Fmac-netzwerk.net%2Flogin%2Fcallback&scope=identify+email`;
+    const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;
     res.redirect(url);
 });
 
-/**
- * @param {import('express').Request & { session: import('express-session').Session & { user?: any } }} req
- * @param {import('express').Response} res
- */
 app.get('/login/callback', async (req, res) => {
     const code = req.query.code;
+    if (!code) {
+        return res.redirect(frontend_url + '/login-failed.html?error=nocode');
+    }
     const params = new URLSearchParams();
     params.append('client_id', client_id);
     params.append('client_secret', client_secret);
     params.append('grant_type', 'authorization_code');
     params.append('code', code);
-    params.append('redirect_uri', discord_redirect_uri); // Verwendet jetzt die dynamische discord_redirect_uri
+    params.append('redirect_uri', discord_redirect_uri);
 
     try {
         const tokenRes = await axios.post('https://discord.com/api/oauth2/token', params, {
@@ -64,17 +53,18 @@ app.get('/login/callback', async (req, res) => {
         });
 
         req.session.user = userRes.data;
-        res.redirect(frontend_url + '/'); // Weiterleitung zum dynamischen Frontend (z.B. http://localhost:5500/ oder https://mac-netzwerk.net/)
+        // Erfolgreiche Weiterleitung zur Homepage im Frontend
+        res.redirect(frontend_url + '/');
     } catch (e) {
         console.error('Login callback error:', e.response ? e.response.data : e.message);
-        res.redirect(frontend_url + '/login-failed.html'); // Weiterleitung zur dynamischen Fehlerseite im Frontend
+        // Fehlerseite im Frontend mit Parameter für spezifische Fehlermeldung
+        const errorQuery = e.response && e.response.data && e.response.data.error_description ?
+                         `?error=${encodeURIComponent(e.response.data.error_description)}` :
+                         '?error=unknown';
+        res.redirect(frontend_url + '/login-failed.html' + errorQuery);
     }
 });
 
-/**
- * @param {import('express').Request & { session: import('express-session').Session & { user?: any } }} req
- * @param {import('express').Response} res
- */
 app.get('/logout', (req, res) => {
     req.session.destroy(err => {
         if (err) {
