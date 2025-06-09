@@ -28,16 +28,6 @@ window.addEventListener('scroll', function() {
     }
 });
 
-// Mobile menu toggle
-const mobileMenuIcon = document.querySelector('.mobile-menu');
-const navLinks = document.querySelector('.nav-links');
-
-if (mobileMenuIcon && navLinks) {
-    mobileMenuIcon.addEventListener('click', function() {
-        navLinks.classList.toggle('open'); // Toggle 'open' class
-    });
-}
-
 // --- Auth Script Start ---
 document.addEventListener('DOMContentLoaded', () => {
     const discordLoginBtn = document.getElementById('discordLoginBtn');
@@ -45,6 +35,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const userAvatarImg = document.getElementById('userAvatar');
     const userNameSpan = document.getElementById('userName');
     const logoutBtn = document.getElementById('logoutBtn');
+
+    // Mobile menu toggle
+    const mobileMenuIcon = document.querySelector('.mobile-menu');
+    const navLinks = document.querySelector('.nav-links');
+
+    if (mobileMenuIcon && navLinks) {
+        mobileMenuIcon.addEventListener('click', function() {
+            navLinks.classList.toggle('open'); // Toggle 'open' class
+        });
+    }
+    // End of Mobile menu toggle
 
     const defaultAvatarUrl = '../logos/favicon-32x32.png'; // Path to your default avatar
 
