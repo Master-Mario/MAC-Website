@@ -1,22 +1,27 @@
 const express = require('express');
 const session = require('express-session');
+const { createClient } = require('redis');
+const RedisStore = require('connect-redis').default; // Korrigierter Import für connect-redis v7+
+const cors = require('cors'); // CORS-Middleware importieren
 const axios = require('axios');
-const cors = require('cors');
-const { createClient } = require('redis'); // Redis-Client importieren
-// const RedisStore = require('connect-redis').default; // Alte Importmethode
-const connectRedis = require('connect-redis'); // Import für connect-redis
-const RedisStore = connectRedis(session); // RedisStore mit session initialisieren
 
 const app = express();
 
-app.set('trust proxy', 1); // Trust first proxy
+// trust proxy Einstellung (wichtig, wenn hinter einem Reverse Proxy wie Nginx)
+app.set('trust proxy', 1);
 
 // Produktions-Konfiguration
 const frontend_url = 'https://mac-netzwerk.net';
 const discord_redirect_uri = 'https://mac-netzwerk.net/login/callback';
 
-// CORS-Middleware verwenden
-app.use(cors({ origin: frontend_url, credentials: true }));
+// CORS-Konfiguration
+// Passen Sie 'http://localhost:5500' an die tatsächliche Adresse Ihres Frontends an.
+// Wenn Sie index.html direkt im Browser öffnen (file://), ist dies komplexer.
+// Für lokale Entwicklung ist es oft besser, das Frontend über einen lokalen Server (z.B. Live Server in VS Code) bereitzustellen.
+app.use(cors({
+    origin: ['http://localhost:5500', 'http://127.0.0.1:5500', 'https://mac-netzwerk.net'], // Erlauben Sie mehrere Origins
+    credentials: true
+}));
 
 // Redis Client Initialisierung
 // Stellen Sie sicher, dass Redis läuft und über REDIS_URL erreichbar ist,
@@ -42,7 +47,6 @@ redisClient.on('connect', function () {
     }
 })();
 
-
 // Session-Konfiguration mit RedisStore
 app.use(session({
     store: new RedisStore({ client: redisClient, prefix: 'macsess:' }), // Redis als Session-Speicher
@@ -50,9 +54,9 @@ app.use(session({
     resave: false,
     saveUninitialized: false, // Empfohlen für Produktion, keine leeren Sessions speichern
     cookie: {
-        secure: true, // In Produktion immer true (HTTPS)
+        secure: process.env.NODE_ENV === 'production', // In Produktion true (HTTPS), in Entwicklung false (HTTP)
         httpOnly: true,
-        sameSite: 'lax', // 'lax' oder 'none' (wenn 'none', dann secure: true zwingend)
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' erfordert secure: true
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 // 1 Tag Lebensdauer für das Cookie
     }
