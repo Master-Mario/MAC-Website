@@ -94,13 +94,13 @@ app.get('/login/callback', async (req, res) => {
 
         req.session.user = userRes.data;
         // Stelle sicher, dass die Session gespeichert ist, bevor weitergeleitet wird
+        console.log('Vor session.save:', req.session);
         req.session.save(err => {
             if (err) {
                 console.error('Session save error:', err);
-                // Fehlerseite im Frontend mit Parameter für spezifische Fehlermeldung
-                return res.redirect(frontend_url + '/login-failed.html?error=session_save_error');
+            } else {
+                console.log('Session wurde gespeichert:', req.sessionID);
             }
-            // Erfolgreiche Weiterleitung zur Homepage im Frontend
             res.redirect(frontend_url + '/');
         });
     } catch (e) {
