@@ -49,6 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // End of Mobile menu toggle
 
+    // Logout Modal Elements
+    const logoutConfirmationModal = document.getElementById('logoutConfirmationModal');
+    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+
     const defaultAvatarUrl = '../logos/favicon-32x32.png'; // Path to your default avatar
 
     async function checkAuthStatus() {
@@ -91,24 +96,63 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userInfoDiv) userInfoDiv.style.display = 'none';
     }
 
+    function showLogoutModal() {
+        if (logoutConfirmationModal) {
+            logoutConfirmationModal.classList.add('open');
+        }
+    }
+
+    function hideLogoutModal() {
+        if (logoutConfirmationModal) {
+            logoutConfirmationModal.classList.remove('open');
+        }
+    }
+
+    async function performActualLogout() {
+        try {
+            const response = await fetch('/logout', { // Geändert zu relativem Pfad
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                displayLoggedOutState();
+                // Optionally redirect to home or refresh
+                // window.location.href = '/';
+            } else {
+                console.error('Logout failed:', response.status);
+                alert('Logout fehlgeschlagen.');
+            }
+        } catch (error) {
+            console.error('Error during logout:', error);
+            alert('Fehler beim Logout.');
+        }
+    }
+
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/logout', { // Geändert zu relativem Pfad
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    displayLoggedOutState();
-                    // Optionally redirect to home or refresh
-                    // window.location.href = '/';
-                } else {
-                    console.error('Logout failed:', response.status);
-                    alert('Logout fehlgeschlagen.');
-                }
-            } catch (error) {
-                console.error('Error during logout:', error);
-                alert('Fehler beim Logout.');
+        logoutBtn.addEventListener('click', (event) => {
+            event.preventDefault(); // Prevent any default action
+            showLogoutModal();
+        });
+    }
+
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener('click', () => {
+            hideLogoutModal();
+            performActualLogout();
+        });
+    }
+
+    if (cancelLogoutBtn) {
+        cancelLogoutBtn.addEventListener('click', () => {
+            hideLogoutModal();
+        });
+    }
+
+    // Close modal if user clicks on the overlay itself
+    if (logoutConfirmationModal) {
+        logoutConfirmationModal.addEventListener('click', (event) => {
+            if (event.target === logoutConfirmationModal) {
+                hideLogoutModal();
             }
         });
     }
