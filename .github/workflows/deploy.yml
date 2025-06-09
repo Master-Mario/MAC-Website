@@ -1,4 +1,4 @@
- name: Deploy to VPS
+name: Deploy to VPS
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           
           # Ins Website-Verzeichnis (Apache DocumentRoot)
           cd /var/www/html/MAC-Website
-           pm2 restart MAC-Backend --update-env
+          pm2 restart MAC-Backend --update-env
           
           # Website aktualisieren
           git pull
