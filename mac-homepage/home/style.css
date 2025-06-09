@@ -526,7 +526,6 @@ footer {
 
 .registration-form button[type="submit"] {
     width: 100%;
-    padding: 1rem;
 }
 
 /* NEU: Auth Section Styles */
@@ -636,7 +635,7 @@ footer {
     }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
     .nav-links {
         display: none;
         /* Wichtig: Damit das mobile Menü korrekt funktioniert, wenn es per JS eingeblendet wird */
@@ -650,6 +649,10 @@ footer {
         text-align: center;
         gap: 1rem;
         box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .nav-links.open {
+        display: flex; /* Diese Regel macht das Menü sichtbar, wenn .open vorhanden ist */
     }
 
     .mobile-menu {

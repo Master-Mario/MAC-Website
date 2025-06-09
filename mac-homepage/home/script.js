@@ -42,7 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (mobileMenuIcon && navLinks) {
         mobileMenuIcon.addEventListener('click', function() {
+            console.log('Mobile menu icon geklickt!'); // Hinzugefügte Zeile für die Diagnose
             navLinks.classList.toggle('open'); // Toggle 'open' class
+            console.log('Klassen von navLinks:', navLinks.className); // Hinzugefügte Zeile für die Diagnose
         });
     }
     // End of Mobile menu toggle
