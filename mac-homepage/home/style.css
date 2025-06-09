@@ -588,9 +588,8 @@ footer {
   transition: background-color 0.3s ease;
 }
 
-.btn-discord-login svg {
+.btn-discord-login img {
   margin-right: 8px;
-  vertical-align: middle;
 }
 
 .btn-discord-login:hover {
@@ -637,7 +636,7 @@ footer {
     }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1200px) {
     .nav-links {
         display: none;
         /* Wichtig: Damit das mobile Menü korrekt funktioniert, wenn es per JS eingeblendet wird */
