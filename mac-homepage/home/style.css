@@ -637,22 +637,39 @@ footer {
 
 @media (max-width: 1400px) {
     .nav-links {
-        display: none;
-        /* Wichtig: Damit das mobile Menü korrekt funktioniert, wenn es per JS eingeblendet wird */
+        /* display: none; MODIFIED BELOW */
+        display: flex; /* Ensure it's a flex container for children */
         flex-direction: column;
         position: absolute;
-        top: 100%; /* Direkt unter der Navbar */
+        top: 100%;
         left: 0;
         width: 100%;
         background: rgba(0, 0, 0, 0.98);
-        padding: 1rem 0;
+        /* padding: 1rem 0; MODIFIED BELOW for animation */
         text-align: center;
         gap: 1rem;
         box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+
+        /* --- Animation Properties: Initial (closed) state --- */
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden; /* Crucial for max-height transition */
+        padding-top: 0;   /* No vertical padding when closed */
+        padding-bottom: 0;/* No vertical padding when closed */
+        /* Apply transitions */
+        transition: max-height 0.35s ease-in-out,
+                    opacity 0.3s ease-in-out,
+                    padding-top 0.35s ease-in-out,
+                    padding-bottom 0.35s ease-in-out;
     }
 
     .nav-links.open {
-        display: flex; /* Diese Regel macht das Menü sichtbar, wenn .open vorhanden ist */
+        /* display: flex; -- This is now default for .nav-links in this media query */
+        /* --- Animation Properties: Target (open) state --- */
+        max-height: 400px; /* Adjusted for content: 7 links * ~2.5rem + 2rem padding = ~19.5rem = ~312px. 400px is safe. */
+        opacity: 1;
+        padding-top: 1rem;   /* Restore vertical padding when open */
+        padding-bottom: 1rem;/* Restore vertical padding when open */
     }
 
     .mobile-menu {
