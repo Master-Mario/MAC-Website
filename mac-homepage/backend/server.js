@@ -1,7 +1,7 @@
 const express = require('express');
 const session = require('express-session');
 const { createClient } = require('redis');
-const RedisStore = require('connect-redis').default; // Korrigierter Import für connect-redis v7+
+const RedisStore = require('connect-redis')(session); // angepasst für ältere connect-redis Versionen
 const cors = require('cors'); // CORS-Middleware importieren
 const axios = require('axios');
 
