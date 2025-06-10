@@ -204,20 +204,44 @@ app.get('/login/callback', async (req, res) => {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
         const access_token = tokenRes.data.access_token;
+        if (!access_token) {
+            throw new Error('Access token not found in response');
+        }
 
         const userRes = await axios.get('https://discord.com/api/users/@me', {
             headers: { Authorization: `Bearer ${access_token}` }
         });
 
+        // Benutzerdaten der Session zuweisen
         req.session.user = userRes.data;
-        // Stelle sicher, dass die Session gespeichert ist, bevor weitergeleitet wird
+
+        // Session speichern und Cookies explizit setzen
         console.log('Vor session.save:', req.session);
         req.session.save(err => {
             if (err) {
                 console.error('Session save error:', err);
-            } else {
-                console.log('Session wurde gespeichert:', req.sessionID);
+                return res.redirect(frontend_url + '/login-failed.html?error=session_save_failed');
             }
+
+            console.log('Session wurde gespeichert:', req.sessionID);
+            console.log('Cookie-Name:', req.sessionID ? 'sessionId' : 'connect.sid');
+
+            // Setze das Cookie manuell
+            const cookieName = 'sessionId';
+            const cookieValue = req.sessionID;
+            const cookieOptions = {
+                path: '/',
+                maxAge: 1000 * 60 * 60 * 24 * 30, // 30 Tage
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                domain: '.mac-netzwerk.net'
+            };
+
+            res.cookie(cookieName, cookieValue, cookieOptions);
+            console.log('Cookie manuell gesetzt:', cookieName, cookieValue, cookieOptions);
+            console.log('Response Headers nach Cookie-Setzung:', res.getHeaders());
+
             res.redirect(frontend_url + '/');
         });
     } catch (e) {
