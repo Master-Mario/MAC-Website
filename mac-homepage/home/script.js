@@ -158,6 +158,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initial check
-    checkAuthStatus();
+    checkAuthStatus(); 
 });
 // --- Auth Script End ---
+// Stripe initialisieren
+const stripe = Stripe('pk_test_...'); // Dein Stripe-Publishable-Key
+let elements, card;
+
+async function setupStripeElements() {
+    elements = stripe.elements();
+    card = elements.create('card');
+    card.mount('#card-element');
+    card.on('change', (event) => {
+        document.getElementById('card-errors').textContent = event.error ? event.error.message : '';
+    });
+}
+
+async function handleRegistrationFormSubmit(event) {
+    event.preventDefault();
+
+    // Hole die E-Mail vom Formular
+    const email = document.getElementById('email').value;
+
+    // SetupIntent vom Server holen
+    const response = await fetch('/create-setup-intent', {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+    });
+    const data = await response.json();
+
+    // SetupIntent bestätigen (Card speichern)
+    const { setupIntent, error } = await stripe.confirmCardSetup(
+        data.clientSecret, {
+            payment_method: {
+                card: card,
+                billing_details: { email }
+            }
+        }
+    );
+    if (error) {
+        document.getElementById('card-errors').textContent = error.message;
+        return;
+    }
+
+    // Jetzt ist die Karte sicher bei Stripe gespeichert!
+    // Sende alle Formulardaten + customerId + paymentMethodId an DEIN backend
+    const registerBody = {
+        minecraftUsername: document.getElementById('minecraftUsername').value,
+        email,
+        customerId: data.customerId,
+        paymentMethodId: setupIntent.payment_method
+    };
+    await fetch('/final-registration', {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(registerBody)
+    });
+
+    // Zeige Erfolg, leite weiter, etc.
+    alert('Registrierung erfolgreich! Wir buchen erst am Monatsende ab.');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupStripeElements();
+    document.getElementById('registrationForm').addEventListener('submit', handleRegistrationFormSubmit);
+});

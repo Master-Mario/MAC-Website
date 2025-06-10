@@ -47,6 +47,16 @@ redisClient.on('connect', function () {
     }
 })();
 
+// Express-Route
+app.post('/create-setup-intent', async (req, res) => {
+    const customer = await stripe.customers.create({ email: req.body.email });
+    const setupIntent = await stripe.setupIntents.create({
+        customer: customer.id,
+        payment_method_types: ['card'],
+    });
+    res.json({ clientSecret: setupIntent.client_secret, customerId: customer.id });
+});
+
 // Session-Konfiguration mit RedisStore
 app.use(session({
     store: new RedisStore({ client: redisClient, prefix: 'macsess:' }), // Redis als Session-Speicher
