@@ -25,10 +25,10 @@ jobs:
           
           # Ins Website-Verzeichnis (Apache DocumentRoot)
           cd /var/www/html/MAC-Website
-          pm2 restart MAC-Backend --update-env
           
           # Website aktualisieren
           git pull
+          pm2 restart MAC-Backend --update-env
           
           # Korrekte Dateirechte für Apache setzen
           find . -type f -name "*.html" -exec chmod 644 {} \;
