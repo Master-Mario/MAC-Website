@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const { createClient } = require('redis');
-const RedisStore = require('connect-redis').default;
+const RedisStore = require('connect-redis')(session);
 const cors = require('cors');
 const axios = require('axios');
 const fetch = require('node-fetch');
@@ -132,7 +132,7 @@ app.use(session({
     cookie: {
         secure: true, // Aktiviert für HTTPS
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: 'none',
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 * 356 // 356 Tage
     }
@@ -168,37 +168,23 @@ app.get('/login/callback', async (req, res) => {
             headers: { Authorization: `Bearer ${access_token}` }
         });
 
-        // Regeneriere die Session, um eine saubere Session sicherzustellen
-        req.session.regenerate(err => {
+        req.session.user = userRes.data;
+        // Stelle sicher, dass die Session gespeichert ist, bevor weitergeleitet wird
+        console.log('Vor session.save:', req.session);
+        req.session.save(err => {
             if (err) {
-                console.error('Session regenerate error:', err);
-                return res.redirect(frontend_url + '/login-failed.html?error=session_regenerate_failed');
+                console.error('Session save error:', err);
+            } else {
+                console.log('Session wurde gespeichert:', req.sessionID);
             }
-
-            // Weise Benutzerdaten der neuen Session zu
-            req.session.user = userRes.data;
-            console.log('Nach regenerate, vor session.save:', req.session);
-
-            // Stelle sicher, dass die Session gespeichert ist, bevor weitergeleitet wird
-            req.session.save(saveErr => {
-                if (saveErr) {
-                    console.error('Session save error nach regenerate:', saveErr);
-                } else {
-                    console.log('Session wurde gespeichert nach regenerate:', req.sessionID);
-                }
-
-                // Logge die gesamte Antwort, um den Set-Cookie-Header zu überprüfen
-                console.log('Response Headers:', res.getHeaders());
-
-                res.redirect(frontend_url + '/');
-            });
+            res.redirect(frontend_url + '/');
         });
     } catch (e) {
         console.error('Login callback error:', e.response ? e.response.data : e.message);
         // Fehlerseite im Frontend mit Parameter für spezifische Fehlermeldung
         const errorQuery = e.response && e.response.data && e.response.data.error_description ?
-                         `?error=${encodeURIComponent(e.response.data.error_description)}` :
-                         '?error=unknown';
+            `?error=${encodeURIComponent(e.response.data.error_description)}` :
+            '?error=unknown';
         res.redirect(frontend_url + '/login-failed.html' + errorQuery);
     }
 });
@@ -218,26 +204,11 @@ app.get('/api/auth/status', (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Surrogate-Control', 'no-store');
-
-    // Zusätzliche Logs zur Diagnose
-    console.log('--- Auth Status Check ---');
-    console.log('Zeitstempel:', new Date().toISOString());
-    console.log('Angefragter Pfad:', req.path);
-    console.log('Session ID vom Cookie (req.sessionID):', req.sessionID);
-    console.log('Gesamtes req.session Objekt:', JSON.stringify(req.session, null, 2));
-    if (req.session && req.session.user) {
-        console.log('req.session.user vorhanden:', JSON.stringify(req.session.user, null, 2));
+    if (req.session.user) {
         res.json({ loggedIn: true, user: req.session.user });
     } else {
-        console.log('req.session.user NICHT vorhanden.');
-        if (!req.session) {
-            console.log('req.session ist undefined oder null.');
-        } else {
-            console.log('req.session ist vorhanden, aber ohne .user');
-        }
         res.json({ loggedIn: false });
     }
-    console.log('--- Ende Auth Status Check ---');
 });
 
 // Korrekter Endpunkt für Stripe Checkout Session Erstellung
