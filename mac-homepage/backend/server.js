@@ -147,19 +147,19 @@ app.use(session({
     store: new RedisStore({
         client: redisClient,
         prefix: 'macsess:',
-        // Deaktiviere touchAfter um sicherzustellen, dass jede Session-Operation sofort in Redis gespeichert wird
         disableTouch: false,
     }),
     secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION',
     resave: false,
     saveUninitialized: false,
-    name: 'sessionId', // Name des Cookies auf "sessionId" gesetzt, um mit dem vom Frontend gesendeten Cookie übereinzustimmen
+    name: 'sessionId',
     cookie: {
         secure: true, // Immer true für HTTPS
         httpOnly: true,
         sameSite: 'none', // Für Cross-Origin Requests erforderlich
         path: '/',
-        maxAge: 1000 * 60 * 60 * 24 * 30 // 30 Tage
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 Tage
+        domain: '.mac-netzwerk.net' // Domain explizit setzen
     }
 }));
 
