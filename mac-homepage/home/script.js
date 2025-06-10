@@ -161,3 +161,76 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAuthStatus();
 });
 // --- Auth Script End ---
+
+// --- Stripe Payment Script Start ---
+document.addEventListener('DOMContentLoaded', () => {
+    const registrationForm = document.getElementById('registrationForm');
+    const paymentMessage = document.getElementById('payment-message');
+    const stripe = Stripe('pk_live_51PfFrHRrYAI1t8kM4xYcsyXyVjYCMBEc2YyYxV0m0jY1kP9jZ0g1bW8lX8hYqX8kZ7jZ6kZ5jZ4iY3hX2gA00l6iI7oY2'); // Ersetze dies mit deinem tatsächlichen Public Key
+
+    if (registrationForm) {
+        registrationForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            paymentMessage.textContent = ''; // Clear previous messages
+
+            const minecraftUsername = document.getElementById('minecraftUsername').value;
+            const email = document.getElementById('email').value;
+            const agbChecked = document.getElementById('agb').checked;
+
+            if (!agbChecked) {
+                paymentMessage.textContent = 'Bitte stimme den AGB und der Datenschutzerklärung zu.';
+                return;
+            }
+
+            if (!minecraftUsername || !email) {
+                paymentMessage.textContent = 'Bitte fülle alle erforderlichen Felder aus.';
+                return;
+            }
+
+            try {
+                // 1. Create a checkout session on the server
+                const response = await fetch('/create-checkout-session', { // Sicherstellen, dass der Pfad korrekt ist
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ minecraftUsername, email }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    paymentMessage.textContent = errorData.error || 'Fehler bei der Erstellung der Bezahlseite.';
+                    console.error('Server error:', errorData);
+                    return;
+                }
+
+                const session = await response.json();
+
+                // 2. Redirect to Stripe Checkout
+                const { error } = await stripe.redirectToCheckout({
+                    sessionId: session.id,
+                });
+
+                if (error) {
+                    paymentMessage.textContent = error.message;
+                    console.error('Stripe error:', error);
+                }
+            } catch (error) {
+                paymentMessage.textContent = 'Ein unerwarteter Fehler ist aufgetreten.';
+                console.error('Client-side error:', error);
+            }
+        });
+    }
+
+    // Handle payment status messages from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('payment_success')) {
+        paymentMessage.style.color = 'green';
+        paymentMessage.textContent = 'Zahlung erfolgreich! Du wirst in Kürze für den Server freigeschaltet.';
+    }
+    if (urlParams.has('payment_cancelled')) {
+        paymentMessage.style.color = 'orange';
+        paymentMessage.textContent = 'Die Zahlung wurde abgebrochen. Bitte versuche es erneut.';
+    }
+});
+// --- Stripe Payment Script End ---

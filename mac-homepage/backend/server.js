@@ -4,8 +4,15 @@ const { createClient } = require('redis');
 const RedisStore = require('connect-redis')(session); // angepasst für ältere connect-redis Versionen
 const cors = require('cors'); // CORS-Middleware importieren
 const axios = require('axios');
+const fetch = require('node-fetch'); // Hinzugefügt für Cloudflare API
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Stripe-Initialisierung
 
 const app = express();
+
+// Cloudflare KV Konfiguration
+const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
+const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+const CLOUDFLARE_KV_NAMESPACE_ID = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
 
 // trust proxy Einstellung (wichtig, wenn hinter einem Reverse Proxy wie Nginx)
 app.set('trust proxy', 1);
@@ -22,6 +29,69 @@ app.use(cors({
     origin: ['http://localhost:5500', 'http://127.0.0.1:5500', 'https://mac-netzwerk.net'], // Erlauben Sie mehrere Origins
     credentials: true
 }));
+
+// Middleware für Stripe Webhook (muss vor app.use(express.json()) stehen, wenn dieses global genutzt wird)
+app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error(`Webhook signature verification failed: ${err.message}`);
+    return res.sendStatus(400);
+  }
+
+  // Handle the event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const minecraftUsername = session.metadata.minecraft_username;
+
+    if (minecraftUsername) {
+      try {
+        // 1. Minecraft UUID abrufen
+        const mojangResponse = await fetch(`https://api.mojang.com/users/profiles/minecraft/${minecraftUsername}`);
+        if (!mojangResponse.ok) {
+          throw new Error(`Mojang API error: ${mojangResponse.statusText}`);
+        }
+        const mojangData = await mojangResponse.json();
+        const playerUUID = mojangData.id;
+
+        // 2. Zu Cloudflare KV hinzufügen
+        const kvKey = `player:${playerUUID}`;
+        const kvValue = JSON.stringify({
+          whitelisted: true,
+          registered_at: new Date().toISOString(),
+          playtime_seconds: 0, // Initialwert
+          last_seen: new Date().toISOString() // Initialwert
+        });
+
+        const cfResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_KV_NAMESPACE_ID}/values/${kvKey}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          body: kvValue
+        });
+
+        if (!cfResponse.ok) {
+          const errorText = await cfResponse.text();
+          throw new Error(`Cloudflare KV API error: ${cfResponse.statusText} - ${errorText}`);
+        }
+        console.log(`Player ${minecraftUsername} (UUID: ${playerUUID}) successfully added to whitelist.`);
+
+      } catch (error) {
+        console.error(`Error processing payment for ${minecraftUsername}:`, error);
+        // Hier könntest du eine Benachrichtigung an dich senden, um den Fall manuell zu prüfen
+      }
+    } else {
+      console.error('Minecraft username not found in session metadata.');
+    }
+  }
+
+  res.json({received: true});
+});
 
 // Redis Client Initialisierung
 // Stellen Sie sicher, dass Redis läuft und über REDIS_URL erreichbar ist,
@@ -132,6 +202,77 @@ app.get('/api/auth/status', (req, res) => {
         res.json({ loggedIn: true, user: req.session.user });
     } else {
         res.json({ loggedIn: false });
+    }
+});
+
+// Neuer Endpunkt für Stripe Checkout Session Erstellung
+app.post('/create-checkout-session', express.json(), async (req, res) => {
+    const { minecraftUsername, email } = req.body;
+
+    if (!minecraftUsername || !email) {
+        return res.status(400).json({ error: 'Minecraft username and email are required.' });
+    }
+
+    const totalServerCost = 10; // Beispiel: 10 EUR
+    let numberOfPlayers = 1; // Standardwert, falls KV-Abruf fehlschlägt oder keine Spieler vorhanden sind
+
+    try {
+        // Anzahl der Spieler aus Cloudflare KV abrufen
+        const listKeysResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_KV_NAMESPACE_ID}/keys?prefix=player:`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (listKeysResponse.ok) {
+            const keysData = await listKeysResponse.json();
+            if (keysData.success && keysData.result) {
+                numberOfPlayers = Math.max(1, keysData.result.length); // Mindestens 1 Spieler annehmen, um Division durch Null zu vermeiden
+            }
+        } else {
+            console.warn('Could not fetch player keys from Cloudflare KV, using default player count.', await listKeysResponse.text());
+        }
+    } catch(err) {
+        console.warn("Error fetching player count from Cloudflare KV, using default player count.", err);
+    }
+
+    // Wenn numberOfPlayers nach dem KV-Abruf immer noch 0 ist (oder weniger, was nicht passieren sollte mit Math.max(1, ...)),
+    // und wir wollen, dass der erste Spieler die vollen Kosten trägt, oder einen Mindestpreis ansetzen.
+    // Für dieses Beispiel: Wenn es 0 Spieler gäbe, würde der neue Spieler die Kosten für 1 Spieler zahlen.
+    // Wenn bereits Spieler da sind, werden die Kosten geteilt.
+    // Die Logik Math.max(1, keysData.result.length) stellt sicher, dass numberOfPlayers mindestens 1 ist, wenn die Abfrage erfolgreich war.
+    // Wenn die Abfrage fehlschlägt, bleibt der numberOfPlayers auf dem initialen Wert von 1.
+
+    const pricePerPlayer = Math.max(1, totalServerCost / numberOfPlayers); // Mindestens 1 EUR pro Spieler
+
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card', 'paypal', 'klarna'], // Füge hier weitere Zahlungsmethoden hinzu
+            line_items: [{
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: 'MAC-SMP Server-Zugang',
+                        description: `Monatliche Kostenbeteiligung für MAC-SMP (Minecraft: ${minecraftUsername})`,
+                    },
+                    unit_amount: Math.round(pricePerPlayer * 100), // Betrag in Cent
+                },
+                quantity: 1,
+            }],
+            mode: 'payment', // Für einmalige Zahlungen; für Abos 'subscription'
+            success_url: `${frontend_url}/smp.html?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${frontend_url}/smp.html?payment_cancelled=true`,
+            customer_email: email, // E-Mail des Kunden für die Quittung und um Gast-Checkouts zu ermöglichen
+            metadata: {
+                minecraft_username: minecraftUsername
+            }
+        });
+        res.json({ id: session.id });
+    } catch (error) {
+        console.error("Error creating Stripe session:", error);
+        res.status(500).json({ error: 'Failed to create payment session.' });
     }
 });
 
