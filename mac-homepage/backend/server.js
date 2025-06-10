@@ -187,8 +187,8 @@ app.get('/login/callback', async (req, res) => {
                     console.log('Session wurde gespeichert nach regenerate:', req.sessionID);
                 }
 
-                // Logge die gesetzten Cookies
-                console.log('Set-Cookie Header:', res.getHeader('Set-Cookie'));
+                // Logge die gesamte Antwort, um den Set-Cookie-Header zu überprüfen
+                console.log('Response Headers:', res.getHeaders());
 
                 res.redirect(frontend_url + '/');
             });
