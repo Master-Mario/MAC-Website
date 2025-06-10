@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 // --- Auth Script End ---
 // Stripe initialisieren
-const stripe = Stripe('pk_test_...'); // Dein Stripe-Publishable-Key
+const stripe = Stripe('pk_test_51RXTZ5CVAp5NuWC89rGK1cRJak3B9beiTkdPqTspklXM8bZ24dqWvLlaoznwSEasgsWsI9N1zOTrLBB8ehfKu22U00uHbKXpaP'); // Dein Stripe-Publishable-Key
 let elements, card;
 
 async function setupStripeElements() {
