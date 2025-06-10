@@ -168,16 +168,27 @@ app.get('/login/callback', async (req, res) => {
             headers: { Authorization: `Bearer ${access_token}` }
         });
 
-        req.session.user = userRes.data;
-        // Stelle sicher, dass die Session gespeichert ist, bevor weitergeleitet wird
-        console.log('Vor session.save:', req.session);
-        req.session.save(err => {
+        // Regeneriere die Session, um eine saubere Session sicherzustellen
+        req.session.regenerate(err => {
             if (err) {
-                console.error('Session save error:', err);
-            } else {
-                console.log('Session wurde gespeichert:', req.sessionID);
+                console.error('Session regenerate error:', err);
+                return res.redirect(frontend_url + '/login-failed.html?error=session_regenerate_failed');
             }
-            res.redirect(frontend_url + '/');
+
+            // Weise Benutzerdaten der neuen Session zu
+            req.session.user = userRes.data;
+            console.log('Nach regenerate, vor session.save:', req.session);
+
+            // Stelle sicher, dass die Session gespeichert ist, bevor weitergeleitet wird
+            req.session.save(saveErr => {
+                if (saveErr) {
+                    console.error('Session save error nach regenerate:', saveErr);
+                    // Eventuell Fehler an Client weiterleiten oder anders behandeln
+                } else {
+                    console.log('Session wurde gespeichert nach regenerate:', req.sessionID);
+                }
+                res.redirect(frontend_url + '/');
+            });
         });
     } catch (e) {
         console.error('Login callback error:', e.response ? e.response.data : e.message);
