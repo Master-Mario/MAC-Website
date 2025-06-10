@@ -269,9 +269,64 @@ app.get('/api/auth/status', (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Surrogate-Control', 'no-store');
-    if (req.session.user) {
-        res.json({ loggedIn: true, user: req.session.user });
+
+    // Zusätzliche Debug-Logs
+    console.log('--- Auth Status Check ---');
+    console.log('Cookie-Header:', req.headers.cookie);
+    console.log('Session ID (req.sessionID):', req.sessionID);
+    console.log('Session:', JSON.stringify(req.session, null, 2));
+
+    // Prüfe direkt in Redis nach der Session
+    if (req.sessionID) {
+        // Der komplette Redis-Key mit Prefix
+        const redisKey = `macsess:${req.sessionID}`;
+        console.log('Suche in Redis nach Key:', redisKey);
+
+        redisClient.get(redisKey, (err, data) => {
+            if (err) {
+                console.error('Redis Fehler beim Abrufen der Session:', err);
+            } else {
+                console.log('Redis-Daten für Session:', data);
+
+                if (data) {
+                    try {
+                        // Parse Redis-Daten
+                        const sessionData = JSON.parse(data);
+                        console.log('Geparste Session-Daten:', sessionData);
+
+                        // Wenn user-Daten in Redis vorhanden sind, aber nicht in req.session
+                        if (sessionData.user && !req.session.user) {
+                            console.log('User-Daten in Redis gefunden, aber nicht in req.session!');
+                            // Manuell die user-Daten aus Redis in req.session setzen
+                            req.session.user = sessionData.user;
+
+                            console.log('Session wurde manuell aktualisiert mit User:', sessionData.user);
+                            return res.json({ loggedIn: true, user: sessionData.user });
+                        }
+                    } catch (parseError) {
+                        console.error('Fehler beim Parsen der Redis-Daten:', parseError);
+                    }
+                } else {
+                    console.log('Keine Session-Daten in Redis gefunden für ID:', req.sessionID);
+                }
+            }
+
+            // Normale Überprüfung fortsetzen, wenn Redis-Überprüfung nicht zu einem Return geführt hat
+            if (req.session && req.session.user) {
+                console.log('req.session.user vorhanden:', JSON.stringify(req.session.user, null, 2));
+                res.json({ loggedIn: true, user: req.session.user });
+            } else {
+                console.log('req.session.user NICHT vorhanden.');
+                if (!req.session) {
+                    console.log('req.session ist undefined oder null.');
+                } else {
+                    console.log('req.session ist vorhanden, aber ohne .user');
+                }
+                res.json({ loggedIn: false });
+            }
+        });
     } else {
+        console.log('Keine Session-ID gefunden!');
         res.json({ loggedIn: false });
     }
 });
