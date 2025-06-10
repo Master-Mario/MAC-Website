@@ -47,14 +47,35 @@ redisClient.on('connect', function () {
     }
 })();
 
-// Express-Route
-app.post('/create-setup-intent', async (req, res) => {
-    const customer = await stripe.customers.create({ email: req.body.email });
-    const setupIntent = await stripe.setupIntents.create({
-        customer: customer.id,
-        payment_method_types: ['card'],
-    });
-    res.json({ clientSecret: setupIntent.client_secret, customerId: customer.id });
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_...'); // Stripe Secret Key
+
+app.post('/create-checkout-session', async (req, res) => {
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'eur',
+                        product_data: {
+                            name: 'MAC-SMP Server Zugang',
+                            description: 'Monatliche Kostenbeteiligung für den MAC-SMP Server.',
+                        },
+                        unit_amount: 200, // Betrag in Cent (z.B. 2€)
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'subscription',
+            success_url: `${frontend_url}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${frontend_url}/cancel.html`,
+        });
+
+        res.json({ id: session.id });
+    } catch (error) {
+        console.error('Error creating checkout session:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 });
 
 // Session-Konfiguration mit RedisStore
