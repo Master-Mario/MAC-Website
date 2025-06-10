@@ -153,7 +153,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION',
     resave: false,
     saveUninitialized: false,
-    name: 'connect.sid', // Zurück zum Standardnamen, der von express-session erwartet wird
+    name: 'sessionId', // Name des Cookies auf "sessionId" gesetzt, um mit dem vom Frontend gesendeten Cookie übereinzustimmen
     cookie: {
         secure: true, // Immer true für HTTPS
         httpOnly: true,
