@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const { createClient } = require('redis');
-const RedisStore = require('connect-redis')(session);
+const RedisStore = require('connect-redis').default;
 const cors = require('cors');
 const axios = require('axios');
 const fetch = require('node-fetch');
@@ -130,11 +130,11 @@ app.use(session({
     resave: false,
     saveUninitialized: false, // Empfohlen für Produktion, keine leeren Sessions speichern
     cookie: {
-        secure: false, // Temporär für Debugging deaktiviert
+        secure: true, // Aktiviert für HTTPS
         httpOnly: true,
-        sameSite: 'none',
+        sameSite: 'lax',
         path: '/',
-        maxAge: 1000 * 60 * 60 * 24 // 1 Tag Lebensdauer für das Cookie
+        maxAge: 1000 * 60 * 60 * 24 * 356 // 356 Tage
     }
 }));
 
