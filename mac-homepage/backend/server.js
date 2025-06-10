@@ -172,6 +172,9 @@ app.get('/api/debug/session', (req, res) => {
     console.log('Session:', req.session);
     console.log('Headers:', req.headers);
 
+    // Überprüfe, ob der Set-Cookie-Header generiert wird
+    console.log('Response Headers vor Send:', res.getHeaders());
+
     res.json({
         sessionID: req.sessionID,
         hasSession: !!req.session,
@@ -179,6 +182,9 @@ app.get('/api/debug/session', (req, res) => {
         cookies: req.headers.cookie,
         user: req.session?.user || null
     });
+
+    // Logge die Response Headers nach Send
+    console.log('Response Headers nach Send:', res.getHeaders());
 });
 
 app.get('/login/callback', async (req, res) => {
