@@ -1,11 +1,11 @@
 const express = require('express');
 const session = require('express-session');
 const { createClient } = require('redis');
-const RedisStore = require('connect-redis')(session); // angepasst für ältere connect-redis Versionen
-const cors = require('cors'); // CORS-Middleware importieren
+const RedisStore = require('connect-redis')(session);
+const cors = require('cors');
 const axios = require('axios');
-const fetch = require('node-fetch'); // Hinzugefügt für Cloudflare API
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Stripe-Initialisierung
+const fetch = require('node-fetch');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -30,7 +30,7 @@ app.use(cors({
     credentials: true
 }));
 
-// Middleware für Stripe Webhook (muss vor app.use(express.json()) stehen, wenn dieses global genutzt wird)
+// Middleware für Stripe Webhook (benötigt raw body, daher vor express.json())
 app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let event;
@@ -93,6 +93,10 @@ app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) =
   res.json({received: true});
 });
 
+// Middleware zum Parsen von JSON-Request-Bodies für andere Routen
+// Diese Zeile MUSS NACH dem Stripe Webhook stehen.
+app.use(express.json());
+
 // Redis Client Initialisierung
 // Stellen Sie sicher, dass Redis läuft und über REDIS_URL erreichbar ist,
 // oder passen Sie die URL entsprechend an.
@@ -116,37 +120,6 @@ redisClient.on('connect', function () {
         console.error('[Redis] Client connection error:', err);
     }
 })();
-
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_...'); // Stripe Secret Key
-
-app.post('/create-checkout-session', async (req, res) => {
-    try {
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'eur',
-                        product_data: {
-                            name: 'MAC-SMP Server Zugang',
-                            description: 'Monatliche Kostenbeteiligung für den MAC-SMP Server.',
-                        },
-                        unit_amount: 200, // Betrag in Cent (z.B. 2€)
-                    },
-                    quantity: 1,
-                },
-            ],
-            mode: 'subscription',
-            success_url: `${frontend_url}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${frontend_url}/cancel.html`,
-        });
-
-        res.json({ id: session.id });
-    } catch (error) {
-        console.error('Error creating checkout session:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
 
 // Session-Konfiguration mit RedisStore
 app.use(session({
@@ -236,8 +209,8 @@ app.get('/api/auth/status', (req, res) => {
     }
 });
 
-// Neuer Endpunkt für Stripe Checkout Session Erstellung
-app.post('/create-checkout-session', express.json(), async (req, res) => {
+// Korrekter Endpunkt für Stripe Checkout Session Erstellung
+app.post('/create-checkout-session', async (req, res) => { // express.json() wird hier implizit durch app.use(express.json()) oben angewendet
     const { minecraftUsername, email } = req.body;
 
     if (!minecraftUsername || !email) {
@@ -245,10 +218,9 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
     }
 
     const totalServerCost = 10; // Beispiel: 10 EUR
-    let numberOfPlayers = 1; // Standardwert, falls KV-Abruf fehlschlägt oder keine Spieler vorhanden sind
+    let numberOfPlayers = 1;
 
     try {
-        // Anzahl der Spieler aus Cloudflare KV abrufen
         const listKeysResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${CLOUDFLARE_KV_NAMESPACE_ID}/keys?prefix=player:`, {
             method: 'GET',
             headers: {
@@ -260,7 +232,7 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
         if (listKeysResponse.ok) {
             const keysData = await listKeysResponse.json();
             if (keysData.success && keysData.result) {
-                numberOfPlayers = Math.max(1, keysData.result.length); // Mindestens 1 Spieler annehmen, um Division durch Null zu vermeiden
+                numberOfPlayers = Math.max(1, keysData.result.length);
             }
         } else {
             console.warn('Could not fetch player keys from Cloudflare KV, using default player count.', await listKeysResponse.text());
@@ -269,18 +241,11 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
         console.warn("Error fetching player count from Cloudflare KV, using default player count.", err);
     }
 
-    // Wenn numberOfPlayers nach dem KV-Abruf immer noch 0 ist (oder weniger, was nicht passieren sollte mit Math.max(1, ...)),
-    // und wir wollen, dass der erste Spieler die vollen Kosten trägt, oder einen Mindestpreis ansetzen.
-    // Für dieses Beispiel: Wenn es 0 Spieler gäbe, würde der neue Spieler die Kosten für 1 Spieler zahlen.
-    // Wenn bereits Spieler da sind, werden die Kosten geteilt.
-    // Die Logik Math.max(1, keysData.result.length) stellt sicher, dass numberOfPlayers mindestens 1 ist, wenn die Abfrage erfolgreich war.
-    // Wenn die Abfrage fehlschlägt, bleibt der numberOfPlayers auf dem initialen Wert von 1.
-
-    const pricePerPlayer = Math.max(1, totalServerCost / numberOfPlayers); // Mindestens 1 EUR pro Spieler
+    const pricePerPlayer = Math.max(1, totalServerCost / numberOfPlayers);
 
     try {
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card', 'paypal', 'klarna'], // Füge hier weitere Zahlungsmethoden hinzu
+            payment_method_types: ['card', 'paypal', 'klarna'],
             line_items: [{
                 price_data: {
                     currency: 'eur',
@@ -288,14 +253,14 @@ app.post('/create-checkout-session', express.json(), async (req, res) => {
                         name: 'MAC-SMP Server-Zugang',
                         description: `Monatliche Kostenbeteiligung für MAC-SMP (Minecraft: ${minecraftUsername})`,
                     },
-                    unit_amount: Math.round(pricePerPlayer * 100), // Betrag in Cent
+                    unit_amount: Math.round(pricePerPlayer * 100),
                 },
                 quantity: 1,
             }],
-            mode: 'payment', // Für einmalige Zahlungen; für Abos 'subscription'
+            mode: 'payment',
             success_url: `${frontend_url}/smp.html?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${frontend_url}/smp.html?payment_cancelled=true`,
-            customer_email: email, // E-Mail des Kunden für die Quittung und um Gast-Checkouts zu ermöglichen
+            customer_email: email,
             metadata: {
                 minecraft_username: minecraftUsername
             }

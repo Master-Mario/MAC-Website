@@ -21,6 +21,7 @@
     <meta name="theme-color" content="#ff0023">
     <meta name="msapplication-TileColor" content="#ff0023">
     <link rel="stylesheet" href="style.css">
+    <!-- Stripe.js SDK muss im Head geladen werden, um frühzeitig verfügbar zu sein -->
     <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
@@ -160,10 +161,8 @@
             <div class="form-group">
                 <h3>Zahlungsinformationen & Kostenmodell</h3>
                 <p>Die Kosten für MAC-SMP (aktuell z.B. 10€/Monat Serverkosten) werden fair auf alle aktiven Spieler aufgeteilt. Bei 5 Spielern wären das 2€ pro Spieler. Wenn du im laufenden Monat beitrittst, zahlst du nur anteilig für die verbleibende Zeit (z.B. bei Einstieg zur Monatsmitte nur 1€ für den ersten Monat). Die anderen Spieler tragen in diesem Fall für diesen Monat einen entsprechend leicht höheren Anteil. Die Abbuchung erfolgt am Monatsende.</p>
-                <!-- Hier würden Stripe/PayPal Elemente integriert -->
-                <div class="payment-placeholder">
-                    <p>Platzhalter für Stripe Zahlungselemente</p>
-                </div>
+                <!-- Nachrichten-Div für Stripe-Feedback -->
+                <div id="payment-message" class="payment-message" style="margin-top: 10px;"></div>
             </div>
 
             <div class="form-group agb-checkbox">
@@ -194,6 +193,7 @@
         </div>
         <p>&copy; 2025 MAC-Netzwerk | Entwickelt von Mario Sinnreich | Wien, Österreich</p>
     </footer>
+    <!-- Das Haupt-Skript wird am Ende des Bodys geladen -->
     <script src="script.js"></script>
 </body>
 </html>
