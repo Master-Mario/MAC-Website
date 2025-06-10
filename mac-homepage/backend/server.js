@@ -144,20 +144,37 @@ redisClient.on('connect', function () {
 
 // Session-Konfiguration mit RedisStore
 app.use(session({
-    store: new RedisStore({ client: redisClient, prefix: 'macsess:' }),
+    store: new RedisStore({
+        client: redisClient,
+        prefix: 'macsess:',
+        // Deaktiviere touchAfter um sicherzustellen, dass jede Session-Operation sofort in Redis gespeichert wird
+        disableTouch: false,
+    }),
     secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION',
     resave: false,
     saveUninitialized: false,
-    name: 'sessionId', // Expliziter Cookie-Name
+    name: 'connect.sid', // Zurück zum Standardnamen, der von express-session erwartet wird
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Nur in Produktion auf true
+        secure: true, // Immer true für HTTPS
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        domain: process.env.NODE_ENV === 'production' ? '.mac-netzwerk.net' : undefined,
+        sameSite: 'none', // Für Cross-Origin Requests erforderlich
         path: '/',
-        maxAge: 1000 * 60 * 60 * 24 * 30 // 30 Tage (nicht 356)
+        maxAge: 1000 * 60 * 60 * 24 * 30 // 30 Tage
     }
 }));
+
+// Session-Diagnose-Middleware
+app.use((req, res, next) => {
+    // Speichere die ursprüngliche sessionID zum Vergleich
+    const originalSessionID = req.sessionID;
+
+    // Überprüfe, ob das Sitzungs-Cookie vorhanden ist
+    console.log('Diagnose - Cookie Header:', req.headers.cookie);
+    console.log('Diagnose - Session ID beim Start der Anfrage:', originalSessionID);
+
+    // Weiter zur nächsten Middleware
+    next();
+});
 
 const client_id = process.env.DISCORD_CLIENT_ID || '1381338008829165658'; // Aus Umgebungsvariable laden
 const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo'; // Aus Umgebungsvariable laden
@@ -215,7 +232,7 @@ app.get('/login/callback', async (req, res) => {
         // Benutzerdaten der Session zuweisen
         req.session.user = userRes.data;
 
-        // Session speichern und Cookies explizit setzen
+        // Session speichern
         console.log('Vor session.save:', req.session);
         req.session.save(err => {
             if (err) {
@@ -224,24 +241,10 @@ app.get('/login/callback', async (req, res) => {
             }
 
             console.log('Session wurde gespeichert:', req.sessionID);
-            console.log('Cookie-Name:', req.sessionID ? 'sessionId' : 'connect.sid');
+            console.log('Session-Cookie wird automatisch gesetzt');
+            console.log('Response Headers:', res.getHeaders());
 
-            // Setze das Cookie manuell
-            const cookieName = 'sessionId';
-            const cookieValue = req.sessionID;
-            const cookieOptions = {
-                path: '/',
-                maxAge: 1000 * 60 * 60 * 24 * 30, // 30 Tage
-                httpOnly: true,
-                secure: true,
-                sameSite: 'none',
-                domain: '.mac-netzwerk.net'
-            };
-
-            res.cookie(cookieName, cookieValue, cookieOptions);
-            console.log('Cookie manuell gesetzt:', cookieName, cookieValue, cookieOptions);
-            console.log('Response Headers nach Cookie-Setzung:', res.getHeaders());
-
+            // Weiterleitung zum Frontend
             res.redirect(frontend_url + '/');
         });
     } catch (e) {
