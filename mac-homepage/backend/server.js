@@ -130,9 +130,9 @@ app.use(session({
     resave: false,
     saveUninitialized: false, // Empfohlen für Produktion, keine leeren Sessions speichern
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // In Produktion true (HTTPS), in Entwicklung false (HTTP)
+        secure: false, // Temporär für Debugging deaktiviert
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' erfordert secure: true
+        sameSite: 'none',
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 // 1 Tag Lebensdauer für das Cookie
     }
