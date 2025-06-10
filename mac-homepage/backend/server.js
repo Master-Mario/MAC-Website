@@ -183,10 +183,13 @@ app.get('/login/callback', async (req, res) => {
             req.session.save(saveErr => {
                 if (saveErr) {
                     console.error('Session save error nach regenerate:', saveErr);
-                    // Eventuell Fehler an Client weiterleiten oder anders behandeln
                 } else {
                     console.log('Session wurde gespeichert nach regenerate:', req.sessionID);
                 }
+
+                // Logge die gesetzten Cookies
+                console.log('Set-Cookie Header:', res.getHeader('Set-Cookie'));
+
                 res.redirect(frontend_url + '/');
             });
         });
