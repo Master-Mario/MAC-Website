@@ -28,8 +28,27 @@ const discord_redirect_uri = 'https://mac-netzwerk.net/login/callback';
 // Wenn Sie index.html direkt im Browser öffnen (file://), ist dies komplexer.
 // Für lokale Entwicklung ist es oft besser, das Frontend über einen lokalen Server (z.B. Live Server in VS Code) bereitzustellen.
 app.use(cors({
-    origin: ['http://localhost:5500', 'http://127.0.0.1:5500', 'https://mac-netzwerk.net'], // Erlauben Sie mehrere Origins
-    credentials: true
+    origin: function (origin, callback) {
+        // Erlaubte Origins
+        const allowedOrigins = [
+            'http://localhost:5500',
+            'http://127.0.0.1:5500',
+            'https://mac-netzwerk.net',
+            'https://www.mac-netzwerk.net'
+        ];
+
+        // Erlaube Requests ohne Origin (z.B. mobile apps, Postman)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Middleware für Stripe Webhook (benötigt raw body, daher vor express.json())
@@ -125,16 +144,18 @@ redisClient.on('connect', function () {
 
 // Session-Konfiguration mit RedisStore
 app.use(session({
-    store: new RedisStore({ client: redisClient, prefix: 'macsess:' }), // Redis als Session-Speicher
-    secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION', // SEHR WICHTIG: In Produktion durch eine sichere Umgebungsvariable ersetzen!
+    store: new RedisStore({ client: redisClient, prefix: 'macsess:' }),
+    secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION',
     resave: false,
-    saveUninitialized: false, // Empfohlen für Produktion, keine leeren Sessions speichern
+    saveUninitialized: false,
+    name: 'sessionId', // Expliziter Cookie-Name
     cookie: {
-        secure: true, // Aktiviert für HTTPS
+        secure: process.env.NODE_ENV === 'production', // Nur in Produktion auf true
         httpOnly: true,
-        sameSite: 'none',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        domain: process.env.NODE_ENV === 'production' ? '.mac-netzwerk.net' : undefined,
         path: '/',
-        maxAge: 1000 * 60 * 60 * 24 * 356 // 356 Tage
+        maxAge: 1000 * 60 * 60 * 24 * 30 // 30 Tage (nicht 356)
     }
 }));
 
@@ -144,6 +165,20 @@ const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ
 app.get('/login', (req, res) => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;
     res.redirect(url);
+});
+
+app.get('/api/debug/session', (req, res) => {
+    console.log('Session ID:', req.sessionID);
+    console.log('Session:', req.session);
+    console.log('Headers:', req.headers);
+
+    res.json({
+        sessionID: req.sessionID,
+        hasSession: !!req.session,
+        hasUser: !!req.session?.user,
+        cookies: req.headers.cookie,
+        user: req.session?.user || null
+    });
 });
 
 app.get('/login/callback', async (req, res) => {
