@@ -204,11 +204,26 @@ app.get('/api/auth/status', (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Surrogate-Control', 'no-store');
-    if (req.session.user) {
+
+    // Zusätzliche Logs zur Diagnose
+    console.log('--- Auth Status Check ---');
+    console.log('Zeitstempel:', new Date().toISOString());
+    console.log('Angefragter Pfad:', req.path);
+    console.log('Session ID vom Cookie (req.sessionID):', req.sessionID);
+    console.log('Gesamtes req.session Objekt:', JSON.stringify(req.session, null, 2));
+    if (req.session && req.session.user) {
+        console.log('req.session.user vorhanden:', JSON.stringify(req.session.user, null, 2));
         res.json({ loggedIn: true, user: req.session.user });
     } else {
+        console.log('req.session.user NICHT vorhanden.');
+        if (!req.session) {
+            console.log('req.session ist undefined oder null.');
+        } else {
+            console.log('req.session ist vorhanden, aber ohne .user');
+        }
         res.json({ loggedIn: false });
     }
+    console.log('--- Ende Auth Status Check ---');
 });
 
 // Korrekter Endpunkt für Stripe Checkout Session Erstellung
