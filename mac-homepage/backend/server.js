@@ -150,44 +150,18 @@ app.use(session({
         disableTouch: false,
     }),
     secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION',
-    resave: false,
+    resave: true, // Auf true setzen, um sicherzustellen, dass die Session gespeichert wird
     saveUninitialized: false,
     name: 'sessionId',
     cookie: {
         secure: true,
         httpOnly: true,
-        sameSite: 'none', // Bei Cross-Origin und HTTPS muss 'none' verwendet werden
+        sameSite: 'none',
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 * 30, // 30 Tage
-        domain: '.mac-netzwerk.net' // Domain explizit setzen
+        domain: '.mac-netzwerk.net'
     }
 }));
-
-// Explizit SameSite=None und Secure bei allen Responses hinzufügen
-app.use((req, res, next) => {
-    const originalEnd = res.end;
-
-    res.end = function() {
-        const cookies = res.getHeader('set-cookie');
-        if (cookies) {
-            const newCookies = Array.isArray(cookies)
-                ? cookies.map(cookie => {
-                    if (cookie.indexOf('SameSite=None') === -1) {
-                        return cookie + '; SameSite=None; Secure';
-                    }
-                    return cookie;
-                })
-                : [cookies + '; SameSite=None; Secure'];
-
-            res.setHeader('set-cookie', newCookies);
-            console.log('Modified cookies:', newCookies);
-        }
-
-        return originalEnd.apply(this, arguments);
-    };
-
-    next();
-});
 
 // Session-Diagnose-Middleware
 app.use((req, res, next) => {
@@ -255,22 +229,37 @@ app.get('/login/callback', async (req, res) => {
             headers: { Authorization: `Bearer ${access_token}` }
         });
         console.log("Benutzerinformationen:", userRes.data);
+
         // Benutzerdaten der Session zuweisen
         req.session.user = userRes.data;
 
-        // Session speichern
-        console.log('Vor session.save:', req.session);
-        req.session.save(err => {
+        // Direkte Speicherung in Redis für den Fall, dass die Session-Middleware das nicht korrekt tut
+        const redisKey = `macsess:${req.sessionID}`;
+        const sessionData = {
+            cookie: req.session.cookie,
+            user: userRes.data
+        };
+
+        console.log('Manuelle Speicherung in Redis:', redisKey, sessionData);
+        redisClient.set(redisKey, JSON.stringify(sessionData), (err) => {
             if (err) {
-                console.error('Session save error:', err);
-                return res.redirect(frontend_url + '/login-failed.html?error=session_save_failed');
+                console.error('Fehler bei manueller Redis-Speicherung:', err);
+            } else {
+                console.log('Session manuell in Redis gespeichert.');
             }
 
-            console.log('Session wurde gespeichert:', req.sessionID);
-            console.log('Session-Cookie wird automatisch gesetzt');
-            console.log('Response Headers:', res.getHeaders());
+            // Cookie manuell setzen mit expliziten Optionen
+            res.cookie('sessionId', req.sessionID, {
+                maxAge: 1000 * 60 * 60 * 24 * 30, // 30 Tage
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                path: '/',
+                domain: '.mac-netzwerk.net'
+            });
 
-            // Weiterleitung zum Frontend
+            console.log('Cookie manuell gesetzt');
+            console.log('Weiterleitung zum Frontend');
             res.redirect(frontend_url + '/');
         });
     } catch (e) {
