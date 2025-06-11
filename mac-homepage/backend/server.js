@@ -28,7 +28,7 @@ app.use(cors({
 // Stellen Sie sicher, dass Redis läuft und über REDIS_URL erreichbar ist,
 // oder passen Sie die URL entsprechend an.
 const redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    url: 'redis://localhost:6379',
     legacyMode: true // Hinzugefügt für Kompatibilität von connect-redis v6 mit redis v4
 });
 
