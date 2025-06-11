@@ -228,7 +228,7 @@ app.get('/login/callback', async (req, res) => {
         const userRes = await axios.get('https://discord.com/api/users/@me', {
             headers: { Authorization: `Bearer ${access_token}` }
         });
-
+        console.log("Benutzerinformationen:", userRes.data);
         // Benutzerdaten der Session zuweisen
         req.session.user = userRes.data;
 
