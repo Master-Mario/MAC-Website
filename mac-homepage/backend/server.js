@@ -1,145 +1,230 @@
+// Umgebungsvariablen laden
 require('dotenv').config();
+
+// Abhängigkeiten importieren
 const express = require('express');
 const session = require('express-session');
-const { createClient } = require('redis');
-const RedisStore = require('connect-redis')(session); // angepasst für ältere connect-redis Versionen
-const cors = require('cors'); // CORS-Middleware importieren
+const passport = require('passport');
+const DiscordStrategy = require('passport-discord').Strategy;
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
 const axios = require('axios');
 
+// Hilfsbibliothek für einen einfachen In-Memory-Store (für Produktionsumgebungen sollte ein persistenter Store wie Redis verwendet werden)
+// Hinweis: Für die Produktion sollte Cloudflare KV hier eingebunden werden
+const UserStore = {
+    users: {},
+
+    findById: function(id) {
+        return this.users[id] || null;
+    },
+
+    saveUser: function(user) {
+        this.users[user.id] = user;
+        return user;
+    },
+
+    removeUser: function(id) {
+        if (this.users[id]) {
+            delete this.users[id];
+            return true;
+        }
+        return false;
+    }
+};
+
+// Server und Middleware konfigurieren
 const app = express();
 
-// trust proxy Einstellung (wichtig, wenn hinter einem Reverse Proxy wie Nginx)
-app.set('trust proxy', 1);
-
-// Produktions-Konfiguration
-const frontend_url = 'https://mac-netzwerk.net';
-const discord_redirect_uri = 'https://mac-netzwerk.net/login/callback';
-
-// CORS-Konfiguration
-// Passen Sie 'http://localhost:5500' an die tatsächliche Adresse Ihres Frontends an.
-// Wenn Sie index.html direkt im Browser öffnen (file://), ist dies komplexer.
-// Für lokale Entwicklung ist es oft besser, das Frontend über einen lokalen Server (z.B. Live Server in VS Code) bereitzustellen.
+// CORS konfigurieren
 app.use(cors({
-    origin: ['http://localhost:5500', 'http://127.0.0.1:5500', 'https://mac-netzwerk.net'], // Erlauben Sie mehrere Origins
+    origin: process.env.WEBSITE_URL,
     credentials: true
 }));
 
-// Redis Client Initialisierung
-// Stellen Sie sicher, dass Redis läuft und über REDIS_URL erreichbar ist,
-// oder passen Sie die URL entsprechend an.
-const redisClient = createClient({
-    url: 'redis://localhost:6379',
-    legacyMode: true // Hinzugefügt für Kompatibilität von connect-redis v6 mit redis v4
-});
+// Body Parser und Cookie Parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-redisClient.on('error', function (err) {
-    console.error('[Redis] Could not connect to Redis:', err);
-});
-
-redisClient.on('connect', function () {
-    console.log('[Redis] Connected to Redis.');
-});
-
-(async () => {
-    try {
-        await redisClient.connect();
-    } catch (err) {
-        console.error('[Redis] Client connection error:', err);
-    }
-})();
-
-// Session-Konfiguration mit RedisStore
+// Session konfigurieren
 app.use(session({
-    store: new RedisStore({ client: redisClient, prefix: 'macsess:' }), // Redis als Session-Speicher
-    secret: process.env.SESSION_SECRET, // SEHR WICHTIG: In Produktion durch eine sichere Umgebungsvariable ersetzen!
+    secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: false, // Empfohlen für Produktion, keine leeren Sessions speichern
+    saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // In Produktion true (HTTPS), in Entwicklung false (HTTP)
-        httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' erfordert secure: true
-        path: '/',
-        maxAge: 1000 * 60 * 60 * 24 // 1 Tag Lebensdauer für das Cookie
+        secure: process.env.COOKIE_SECURE === 'true', // Sollte in Produktion true sein
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 Tage
     }
 }));
 
-const client_id = process.env.DISCORD_CLIENT_ID; // Aus Umgebungsvariable laden
-const client_secret = process.env.DISCORD_CLIENT_SECRET; // Aus Umgebungsvariable laden
+// Passport initialisieren
+app.use(passport.initialize());
+app.use(passport.session());
 
-app.get('/login', (req, res) => {
-    const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;
-    res.redirect(url);
-});
+// Discord-Strategie konfigurieren
+const discordScopes = ['identify', 'email'];
 
-app.get('/login/callback', async (req, res) => {
-    const code = req.query.code;
-    if (!code) {
-        return res.redirect(frontend_url + '/login-failed.html?error=nocode');
-    }
-    const params = new URLSearchParams();
-    params.append('client_id', client_id);
-    params.append('client_secret', client_secret);
-    params.append('grant_type', 'authorization_code');
-    params.append('code', code);
-    params.append('redirect_uri', discord_redirect_uri);
-
+passport.use(new DiscordStrategy({
+    clientID: process.env.DISCORD_CLIENT_ID,
+    clientSecret: process.env.DISCORD_CLIENT_SECRET,
+    callbackURL: process.env.DISCORD_CALLBACK_URL,
+    scope: discordScopes
+}, async (accessToken, refreshToken, profile, done) => {
     try {
-        const tokenRes = await axios.post('https://discord.com/api/oauth2/token', params, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-        const access_token = tokenRes.data.access_token;
+        // User zum Store hinzufügen oder aktualisieren
+        const user = {
+            id: profile.id,
+            username: profile.username,
+            discriminator: profile.discriminator,
+            avatar: profile.avatar,
+            email: profile.email,
+            accessToken,
+            refreshToken,
+            lastLogin: new Date()
+        };
 
-        const userRes = await axios.get('https://discord.com/api/users/@me', {
-            headers: { Authorization: `Bearer ${access_token}` }
-        });
-
-        req.session.user = userRes.data;
-        // Stelle sicher, dass die Session gespeichert ist, bevor weitergeleitet wird
-        console.log('Vor session.save:', req.session);
-        req.session.save(err => {
-            if (err) {
-                console.error('Session save error:', err);
-            } else {
-                console.log('Session wurde gespeichert:', req.sessionID);
-            }
-            res.redirect(frontend_url + '/');
-        });
-    } catch (e) {
-        console.error('Login callback error:', e.response ? e.response.data : e.message);
-        // Fehlerseite im Frontend mit Parameter für spezifische Fehlermeldung
-        const errorQuery = e.response && e.response.data && e.response.data.error_description ?
-            `?error=${encodeURIComponent(e.response.data.error_description)}` :
-            '?error=unknown';
-        res.redirect(frontend_url + '/login-failed.html' + errorQuery);
+        UserStore.saveUser(user);
+        return done(null, user);
+    } catch (error) {
+        return done(error, null);
     }
+}));
+
+// Passport-Serialisierung
+passport.serializeUser((user, done) => {
+    done(null, user.id);
 });
+
+passport.deserializeUser((id, done) => {
+    const user = UserStore.findById(id);
+    done(null, user);
+});
+
+// Statische Dateien aus dem home-Verzeichnis bereitstellen
+app.use(express.static(path.join(__dirname, '../home')));
+
+// Middleware für Authentifizierungsprüfung
+const isAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    res.redirect('/login');
+};
+
+// Auth-Routen
+app.get('/login', passport.authenticate('discord', { scope: discordScopes }));
+
+app.get('/login/callback',
+    passport.authenticate('discord', {
+        failureRedirect: '/?auth_error=true'
+    }),
+    (req, res) => {
+        // Erfolgreiche Authentifizierung
+        res.redirect('/');
+    }
+);
 
 app.get('/logout', (req, res) => {
-    req.session.destroy(err => {
+    req.logout(function(err) {
         if (err) {
-            return res.status(500).send('Could not log out.');
+            console.error('Fehler beim Logout:', err);
+            return res.status(500).json({ error: 'Logout fehlgeschlagen' });
         }
-        res.clearCookie('connect.sid'); // Cookie löschen, Name kann je nach Session-Store variieren
-        res.status(200).send({ message: 'Logged out successfully' });
+        res.redirect('/');
     });
 });
 
+// API-Routen
 app.get('/api/auth/status', (req, res) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Surrogate-Control', 'no-store');
-    if (req.session.user) {
-        res.json({ loggedIn: true, user: req.session.user });
-    } else {
-        res.json({ loggedIn: false });
+    if (req.isAuthenticated()) {
+        const userData = {
+            id: req.user.id,
+            username: req.user.username,
+            avatar: req.user.avatar,
+            email: req.user.email
+        };
+
+        return res.json({
+            loggedIn: true,
+            user: userData
+        });
+    }
+
+    res.json({
+        loggedIn: false,
+        user: null
+    });
+});
+
+// Alle anderen Routen zur index.html weiterleiten für clientseitiges Routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../home/index.html'));
+});
+
+// Server starten
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server läuft auf Port ${PORT}`);
+    console.log(`Discord Callback URL: ${process.env.DISCORD_CALLBACK_URL}`);
+    console.log(`Umgebung: ${process.env.NODE_ENV}`);
+});
+
+// Hinweis für die Integration von Cloudflare KV in der Produktion:
+/*
+Für die Produktionsumgebung sollte der UserStore durch eine persistente Lösung wie Cloudflare KV ersetzt werden.
+Hier ein Beispiel für die Integration:
+
+1. Importiere die KV-Bibliothek:
+const { getAssetFromKV } = require('@cloudflare/kv-asset-handler');
+
+2. Erstelle eine Klasse für den UserStore mit KV:
+class CloudflareKVUserStore {
+    constructor(KV_NAMESPACE) {
+        this.kv = KV_NAMESPACE;
+    }
+
+    async findById(id) {
+        try {
+            return await this.kv.get(`user:${id}`, 'json');
+        } catch (error) {
+            console.error('KV Fehler beim Abrufen des Benutzers:', error);
+            return null;
+        }
+    }
+
+    async saveUser(user) {
+        try {
+            await this.kv.put(`user:${user.id}`, JSON.stringify(user));
+            return user;
+        } catch (error) {
+            console.error('KV Fehler beim Speichern des Benutzers:', error);
+            throw error;
+        }
+    }
+
+    async removeUser(id) {
+        try {
+            await this.kv.delete(`user:${id}`);
+            return true;
+        } catch (error) {
+            console.error('KV Fehler beim Löschen des Benutzers:', error);
+            return false;
+        }
+    }
+}
+
+3. Instanziiere und verwende den Store:
+const userStore = new CloudflareKVUserStore(KV_NAMESPACE);
+
+4. Passe die Passport-Funktionen entsprechend an (mit async/await):
+passport.deserializeUser(async (id, done) => {
+    try {
+        const user = await userStore.findById(id);
+        done(null, user);
+    } catch (error) {
+        done(error, null);
     }
 });
-
-app.get('/profile', (req, res) => {
-    if (!req.session.user) return res.redirect('/login');
-    res.send(`Hallo ${req.session.user.username}!`);
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server läuft auf Port ${PORT}`));
+*/
