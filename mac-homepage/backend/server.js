@@ -165,7 +165,27 @@ app.use(session({
 
 // Explizit SameSite=None und Secure bei allen Responses hinzufügen
 app.use((req, res, next) => {
-    res.setHeader('Set-Cookie', `${res.getHeader('Set-Cookie')}; SameSite=None; Secure`);
+    const originalEnd = res.end;
+
+    res.end = function() {
+        const cookies = res.getHeader('set-cookie');
+        if (cookies) {
+            const newCookies = Array.isArray(cookies)
+                ? cookies.map(cookie => {
+                    if (cookie.indexOf('SameSite=None') === -1) {
+                        return cookie + '; SameSite=None; Secure';
+                    }
+                    return cookie;
+                })
+                : [cookies + '; SameSite=None; Secure'];
+
+            res.setHeader('set-cookie', newCookies);
+            console.log('Modified cookies:', newCookies);
+        }
+
+        return originalEnd.apply(this, arguments);
+    };
+
     next();
 });
 
