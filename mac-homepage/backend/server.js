@@ -154,14 +154,20 @@ app.use(session({
     saveUninitialized: false,
     name: 'sessionId',
     cookie: {
-        secure: true, // Immer true für HTTPS
+        secure: true,
         httpOnly: true,
-        sameSite: 'none', // Für Cross-Origin Requests erforderlich
+        sameSite: 'none', // Bei Cross-Origin und HTTPS muss 'none' verwendet werden
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 * 30, // 30 Tage
         domain: '.mac-netzwerk.net' // Domain explizit setzen
     }
 }));
+
+// Explizit SameSite=None und Secure bei allen Responses hinzufügen
+app.use((req, res, next) => {
+    res.setHeader('Set-Cookie', `${res.getHeader('Set-Cookie')}; SameSite=None; Secure`);
+    next();
+});
 
 // Session-Diagnose-Middleware
 app.use((req, res, next) => {
@@ -262,7 +268,7 @@ app.get('/logout', (req, res) => {
         if (err) {
             return res.status(500).send('Could not log out.');
         }
-        res.clearCookie('connect.sid'); // Cookie löschen, Name kann je nach Session-Store variieren
+        res.clearCookie('sessionId'); // Cookie löschen, Name kann je nach Session-Store variieren
         res.status(200).send({ message: 'Logged out successfully' });
     });
 });
