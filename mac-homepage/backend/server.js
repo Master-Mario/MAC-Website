@@ -50,7 +50,7 @@ redisClient.on('connect', function () {
 // Session-Konfiguration mit RedisStore
 app.use(session({
     store: new RedisStore({ client: redisClient, prefix: 'macsess:' }), // Redis als Session-Speicher
-    secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION', // SEHR WICHTIG: In Produktion durch eine sichere Umgebungsvariable ersetzen!
+    secret: process.env.SESSION_SECRET, // SEHR WICHTIG: In Produktion durch eine sichere Umgebungsvariable ersetzen!
     resave: false,
     saveUninitialized: false, // Empfohlen für Produktion, keine leeren Sessions speichern
     cookie: {
@@ -62,8 +62,8 @@ app.use(session({
     }
 }));
 
-const client_id = process.env.DISCORD_CLIENT_ID || '1381338008829165658'; // Aus Umgebungsvariable laden
-const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo'; // Aus Umgebungsvariable laden
+const client_id = process.env.DISCORD_CLIENT_ID; // Aus Umgebungsvariable laden
+const client_secret = process.env.DISCORD_CLIENT_SECRET; // Aus Umgebungsvariable laden
 
 app.get('/login', (req, res) => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;

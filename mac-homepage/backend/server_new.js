@@ -149,7 +149,7 @@ app.use(session({
         prefix: 'macsess:',
         disableTouch: false,
     }),
-    secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION',
+    secret: process.env.SESSION_SECRET,
     resave: true, // Auf true setzen, um sicherzustellen, dass die Session gespeichert wird
     saveUninitialized: false,
     name: 'sessionId',
@@ -176,8 +176,8 @@ app.use((req, res, next) => {
     next();
 });
 
-const client_id = process.env.DISCORD_CLIENT_ID || '1381338008829165658'; // Aus Umgebungsvariable laden
-const client_secret = process.env.DISCORD_CLIENT_SECRET || 'l_6FNh5yNmQYcAStNQsJ2AXZ42kZf0Xo'; // Aus Umgebungsvariable laden
+const client_id = process.env.DISCORD_CLIENT_ID; // Aus Umgebungsvariable laden
+const client_secret = process.env.DISCORD_CLIENT_SECRET; // Aus Umgebungsvariable laden
 
 app.get('/login', (req, res) => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(discord_redirect_uri)}&response_type=code&scope=identify+email`;
