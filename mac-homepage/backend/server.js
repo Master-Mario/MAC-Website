@@ -6,6 +6,8 @@ const DiscordStrategy = require('passport-discord').Strategy;
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const Redis = require('ioredis');
+const RedisStore = require('connect-redis').default;
 
 // Initialisiere Express App
 const app = express();
@@ -33,8 +35,43 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Redis-Client initialisieren für Session-Speicher
+let redisClient;
+let sessionStore;
+
+if (process.env.NODE_ENV === 'production') {
+  try {
+    // Produktionsmodus - Redis verwenden
+    redisClient = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: process.env.REDIS_PORT || 6379,
+      password: process.env.REDIS_PASSWORD,
+      retryStrategy: (times) => {
+        // Exponentielles Backoff für Wiederverbindungsversuche
+        return Math.min(times * 100, 3000);
+      }
+    });
+
+    redisClient.on('error', (err) => {
+      console.error('Redis-Verbindungsfehler:', err);
+    });
+
+    // Redis-Session-Store erstellen
+    sessionStore = new RedisStore({ client: redisClient });
+    console.log('Redis-Session-Store wird verwendet (Produktionsmodus)');
+  } catch (error) {
+    console.error('Fehler beim Einrichten des Redis-Stores:', error);
+    console.warn('Fallback auf MemoryStore (nicht für Produktion empfohlen)');
+    sessionStore = undefined; // Fallback auf Standard-MemoryStore
+  }
+} else {
+  console.log('MemoryStore wird verwendet (Entwicklungsmodus)');
+  sessionStore = undefined; // Entwicklungsmodus verwendet MemoryStore
+}
+
 // Session-Konfiguration
 app.use(session({
+  store: sessionStore, // Redis-Store oder undefined für Memory-Store
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -81,7 +118,7 @@ app.use(express.static(path.join(__dirname, '../')));
 // Weiterleitung zur Discord-Authentifizierung
 app.get('/login', passport.authenticate('discord'));
 
-// Discord-Callback-Route
+// Discord-Callback-Route - Hier war das Problem mit dem missing parameter
 app.get('/login/callback',
   passport.authenticate('discord', {
     failureRedirect: '/'
@@ -126,6 +163,22 @@ app.get('*.html', (req, res) => {
 // Fallback-Route für alle nicht abgefangenen GET-Anfragen
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../home/index.html'));
+});
+
+// Prozess-Beendigung sauber behandeln
+process.on('SIGTERM', () => {
+  console.log('SIGTERM Signal erhalten, Server wird sauber heruntergefahren');
+  if (redisClient) {
+    redisClient.quit().then(() => {
+      console.log('Redis-Client wurde ordnungsgemäß geschlossen');
+      process.exit(0);
+    }).catch((err) => {
+      console.error('Fehler beim Schließen des Redis-Clients:', err);
+      process.exit(1);
+    });
+  } else {
+    process.exit(0);
+  }
 });
 
 // Server starten
