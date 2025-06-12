@@ -255,7 +255,6 @@ function setupRoutes() {
         metadata: { minecraftUsername },
         success_url: `${process.env.WEBSITE_URL || 'https://mac-netzwerk.net'}/smp.html?payment_success=1`,
         cancel_url: `${process.env.WEBSITE_URL || 'https://mac-netzwerk.net'}/smp.html?payment_cancelled=1`,
-        customer_email: email,
       });
 
       res.json({ id: session.id });
