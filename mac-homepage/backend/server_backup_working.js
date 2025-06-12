@@ -4,7 +4,6 @@ const session = require('express-session');
 const cors = require('cors'); // CORS-Middleware importieren
 const axios = require('axios');
 const path = require('path');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -214,57 +213,6 @@ function setupRoutes() {
     } else {
       console.log('Kein Benutzer in Session gefunden');
       res.json({ loggedIn: false });
-    }
-  });
-
-  // Stripe SetupIntent & Checkout Session
-  app.post('/create-checkout-session', async (req, res) => {
-    const { minecraftUsername, email } = req.body;
-    if (!minecraftUsername || !email) {
-      return res.status(400).json({ error: 'Minecraft-Username und E-Mail sind erforderlich.' });
-    }
-    try {
-      // 1. Stripe Customer anlegen oder suchen
-      let customer;
-      const search = await stripe.customers.search({
-        query: `email:'${email}'`,
-        limit: 1
-      });
-      if (search.data.length > 0) {
-        customer = search.data[0];
-      } else {
-        customer = await stripe.customers.create({
-          email,
-          name: minecraftUsername,
-          metadata: { minecraftUsername }
-        });
-      }
-
-      // 2. SetupIntent für spätere Abbuchung (monatlich) erstellen
-      const setupIntent = await stripe.setupIntents.create({
-        customer: customer.id,
-        usage: 'off_session',
-        metadata: { minecraftUsername }
-      });
-
-      // 3. Stripe Checkout-Session für SetupIntent erstellen
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        mode: 'setup',
-        customer: customer.id,
-        setup_intent_data: {
-          metadata: { minecraftUsername }
-        },
-        metadata: { minecraftUsername },
-        success_url: `${process.env.WEBSITE_URL || 'https://mac-netzwerk.net'}/smp.html?payment_success=1`,
-        cancel_url: `${process.env.WEBSITE_URL || 'https://mac-netzwerk.net'}/smp.html?payment_cancelled=1`,
-        customer_email: email,
-      });
-
-      res.json({ id: session.id });
-    } catch (err) {
-      console.error('Stripe Fehler:', err);
-      res.status(500).json({ error: 'Stripe-Fehler: ' + (err.message || 'Unbekannter Fehler') });
     }
   });
 
