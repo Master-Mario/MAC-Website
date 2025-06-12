@@ -205,7 +205,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const session = await response.json();
-
+                console.log('Stripe-Session-Response:', session); // Debug-Ausgabe
+                if (!session.id) {
+                    paymentMessage.textContent = session.error || 'Fehler: Keine Session-ID erhalten.';
+                    return;
+                }
                 // 2. Redirect to Stripe Checkout
                 const { error } = await stripe.redirectToCheckout({
                     sessionId: session.id,
@@ -234,5 +238,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 // --- Stripe Payment Script End ---
-
-
