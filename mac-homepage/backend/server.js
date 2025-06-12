@@ -42,9 +42,25 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production', // Nur HTTPS im Produktionsmodus
     httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000 // Session läuft nach 7 Tagen ab
+    maxAge: 7 * 24 * 60 * 60 * 1000, // Session läuft nach 7 Tagen ab
+    sameSite: 'lax' // Erlaube Cookies für Cross-Site-Requests
   }
 }));
+
+// Session-Debugging-Middleware
+app.use((req, res, next) => {
+  // Protokolliere Session-Informationen bei jeder Anfrage
+  if (req.session) {
+    console.log('Session aktiv:', {
+      id: req.sessionID,
+      hasUser: !!req.session.passport?.user,
+      cookie: req.session.cookie
+    });
+  } else {
+    console.log('Keine Session gefunden');
+  }
+  next();
+});
 
 // Passport initialisieren
 app.use(passport.initialize());
@@ -107,15 +123,22 @@ app.get('/logout', (req, res) => {
 // API-Routen
 // Status-Endpunkt zum Überprüfen des Auth-Status
 app.get('/api/auth/status', (req, res) => {
+  console.log('Auth-Status angefragt:');
+  console.log('isAuthenticated:', req.isAuthenticated());
+  console.log('Session-ID:', req.sessionID);
+  console.log('User in Session:', req.user);
+
   if (req.isAuthenticated()) {
     // Filtere sensible Informationen heraus und sende nur das Nötigste
     const { id, username, discriminator, avatar, email } = req.user;
+    console.log('Sende Benutzerinfo zurück:', { id, username });
     return res.json({
       loggedIn: true,
       user: { id, username, discriminator, avatar, email }
     });
   }
 
+  console.log('Benutzer ist nicht authentifiziert');
   return res.json({ loggedIn: false });
 });
 
