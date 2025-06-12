@@ -102,10 +102,10 @@ function initializeApp() {
     next();
   });
 
-  // Statische Dateien bereitstellen
-  app.use(express.static(path.join(__dirname, '../')));
-
   setupRoutes();
+
+  // Statische Dateien bereitstellen (nach den API-Routen!)
+  app.use(express.static(path.join(__dirname, '../')));
 }
 
 function setupRoutes() {
