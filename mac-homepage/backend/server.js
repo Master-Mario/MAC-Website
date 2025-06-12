@@ -82,7 +82,7 @@ app.use(express.static(path.join(__dirname, '../')));
 // Weiterleitung zur Discord-Authentifizierung
 app.get('/login', passport.authenticate('discord'));
 
-// Discord-Callback-Route - Korrigiert, um das URL-Parsing-Problem zu beheben
+// Discord-Callback-Route
 app.get('/login/callback',
   passport.authenticate('discord', {
     failureRedirect: '/'
@@ -119,14 +119,18 @@ app.get('/api/auth/status', (req, res) => {
   return res.json({ loggedIn: false });
 });
 
-// Fallback für alle HTML-Anfragen - Ermöglicht Client-Side-Routing
-app.get('*.html', (req, res) => {
+// Fallback für alle HTML-Anfragen mit exakter Übereinstimmung
+app.get('/*.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../', req.path));
 });
 
-// Fallback-Route für alle nicht abgefangenen GET-Anfragen
-// Korrigiert: Fehlerhafte Route, die einen Path-to-Regexp-Fehler verursachen könnte
-app.get('*', (req, res) => {
+// Fallback-Route für die Startseite
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../home/index.html'));
+});
+
+// Fallback-Route für alle anderen Anfragen
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../home/index.html'));
 });
 
