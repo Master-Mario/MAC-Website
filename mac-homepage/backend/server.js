@@ -30,10 +30,11 @@ let sessionConfig = {
   secret: process.env.SESSION_SECRET || 'BITTE_UNBEDINGT_AENDERN_IN_PRODUKTION',
   resave: true, // Auf true geändert für bessere Kompatibilität
   saveUninitialized: true, // Auf true geändert für bessere Kompatibilität
+  name: 'mac.sid', // Spezifischer Name für das Session-Cookie
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // In Produktion true (HTTPS), in Entwicklung false (HTTP)
+    secure: false, // Auf false gesetzt, damit Cookies auch ohne HTTPS funktionieren
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' für Cross-Site-Requests in Produktion
+    sameSite: 'lax', // Auf 'lax' gesetzt für bessere Kompatibilität
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 Tage Lebensdauer für das Cookie (erhöht von 1 Tag)
   }
