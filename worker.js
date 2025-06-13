@@ -1,9 +1,5 @@
-import Stripe from 'stripe';
-
 export default {
     async fetch(request, env, ctx) {
-        // Neue Initialisierung mit Cloudflare Env Variablen
-        const stripe = new Stripe(env.STRIPE_SECRET_KEY);
         const jwtSecret = new TextEncoder().encode(env.JWT_SECRET);
 
         // Neue Definition von signJWT
@@ -137,13 +133,26 @@ export default {
                 });
             }
             try {
-                const session = await stripe.checkout.sessions.create({
-                    mode: 'setup',
-                    customer_email: email,
-                    payment_method_types: ['card', 'sepa_debit'], // optional: weitere Zahlungsmethoden ergänzen
-                    success_url: `${env.WEBSITE_URL}/payment-setup-success?session_id={CHECKOUT_SESSION_ID}`,
-                    cancel_url: `${env.WEBSITE_URL}/payment-setup-cancel`
+                // Verwende den offiziellen Stripe HTTP API Aufruf
+                const stripeUrl = 'https://api.stripe.com/v1/checkout/sessions';
+                const formData = new URLSearchParams();
+                formData.append('mode', 'setup');
+                formData.append('customer_email', email);
+                formData.append('success_url', `${env.WEBSITE_URL}/payment-setup-success?session_id={CHECKOUT_SESSION_ID}`);
+                formData.append('cancel_url', `${env.WEBSITE_URL}/payment-setup-cancel`);
+                formData.append('payment_method_types[]', 'card');
+                formData.append('payment_method_types[]', 'sepa_debit');
+
+                const stripeRes = await fetch(stripeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
+                    },
+                    body: formData.toString()
                 });
+                const session = await stripeRes.json();
+                if (!stripeRes.ok) throw new Error(session.error ? session.error.message : 'Stripe API Fehler');
                 return new Response(JSON.stringify({ url: session.url }), {
                     headers: { 'Content-Type': 'application/json' }
                 });
