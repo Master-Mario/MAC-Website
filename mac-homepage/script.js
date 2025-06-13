@@ -166,8 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const paymentMessage = document.getElementById('payment-message');
-    const stripe = Stripe('pk_live_51PfFrHRrYAI1t8kM4xYcsyXyVjYCMBEc2YyYxV0m0jY1kP9jZ0g1bW8lX8hYqX8kZ7jZ6kZ5jZ4iY3hX2gA00l6iI7oY2'); // Ersetze dies mit deinem tatsächlichen Public Key
-
     if (registrationForm) {
         registrationForm.addEventListener('submit', async (event) => {
             event.preventDefault();
