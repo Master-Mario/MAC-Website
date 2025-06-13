@@ -204,21 +204,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                const session = await response.json();
-                console.log('Stripe-Session-Response:', session); // Debug-Ausgabe
-                if (!session.id) {
-                    paymentMessage.textContent = session.error || 'Fehler: Keine Session-ID erhalten.';
+                const sessionData = await response.json();
+                if (!sessionData.url) {
+                    paymentMessage.textContent = 'Fehler: Keine URL für die Bezahlseite erhalten.';
                     return;
                 }
-                // 2. Redirect to Stripe Checkout
-                const { error } = await stripe.redirectToCheckout({
-                    sessionId: session.id,
-                });
+                // 2. Redirect to the Stripe Checkout page
+                window.location.href = sessionData.url;
 
-                if (error) {
-                    paymentMessage.textContent = error.message;
-                    console.error('Stripe error:', error);
-                }
             } catch (error) {
                 paymentMessage.textContent = 'Ein unerwarteter Fehler ist aufgetreten.';
                 console.error('Client-side error:', error);
