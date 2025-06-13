@@ -1,0 +1,163 @@
+import Stripe from 'stripe';
+
+export default {
+    async fetch(request, env, ctx) {
+        // Neue Initialisierung mit Cloudflare Env Variablen
+        const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+        const jwtSecret = new TextEncoder().encode(env.JWT_SECRET);
+
+        // Neue Definition von signJWT
+        async function signJWT(payload, ttlSeconds = 604800) {
+            const header = { alg: 'HS256', typ: 'JWT' };
+            const now = Math.floor(Date.now() / 1000);
+            payload.iat = now;
+            payload.exp = now + ttlSeconds;
+        
+            const base64url = (obj) => btoa(JSON.stringify(obj)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+            const toSign = `${base64url(header)}.${base64url(payload)}`;
+        
+            const signature = await crypto.subtle.sign(
+                { name: 'HMAC' },
+                await crypto.subtle.importKey('raw', jwtSecret, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']),
+                new TextEncoder().encode(toSign)
+            );
+        
+            const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+                .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+            return `${toSign}.${sigB64}`;
+        }
+        
+        // Neue Definition von verifyJWT
+        async function verifyJWT(token) {
+            try {
+                const [headerB64, payloadB64, sigB64] = token.split('.');
+                const encoder = new TextEncoder();
+                const key = await crypto.subtle.importKey('raw', jwtSecret, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+                const data = encoder.encode(`${headerB64}.${payloadB64}`);
+                const sig = Uint8Array.from(atob(sigB64.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+                const valid = await crypto.subtle.verify('HMAC', key, sig, data);
+                if (!valid) return null;
+                return JSON.parse(atob(payloadB64));
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function getCookie(request, name) {
+            const cookies = Object.fromEntries(
+                (request.headers.get('Cookie') || '')
+                    .split(';')
+                    .map(c => c.trim().split('=').map(decodeURIComponent))
+            );
+            return cookies[name];
+        }
+
+        function setJWTCookie(jwt) {
+            return `mac_sid=${jwt}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax; Secure`;
+        }
+
+        const url = new URL(request.url);
+        const path = url.pathname;
+        const method = request.method;
+        
+        const token = getCookie(request, 'mac_sid');
+        const session = token ? await verifyJWT(token) : null;
+
+        const headers = new Headers();
+
+        // /login
+        if (path === '/login') {
+            const params = new URLSearchParams({
+                client_id: env.DISCORD_CLIENT_ID,
+                redirect_uri: env.DISCORD_CALLBACK_URL,
+                response_type: 'code',
+                scope: 'identify email'
+            });
+            return Response.redirect(`https://discord.com/api/oauth2/authorize?${params}`, 302);
+        }
+
+        // /login/callback
+        if (path === '/login/callback') {
+            const code = url.searchParams.get('code');
+            if (!code) return Response.redirect(env.WEBSITE_URL + '/?error=no_code', 302);
+
+            try {
+                const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        client_id: env.DISCORD_CLIENT_ID,
+                        client_secret: env.DISCORD_CLIENT_SECRET,
+                        grant_type: 'authorization_code',
+                        code,
+                        redirect_uri: env.DISCORD_CALLBACK_URL
+                    })
+                });
+                const { access_token } = await tokenRes.json();
+
+                const userRes = await fetch('https://discord.com/api/users/@me', {
+                    headers: { Authorization: `Bearer ${access_token}` }
+                });
+                const user = await userRes.json();
+
+                const jwt = await signJWT({ user });
+                headers.set('Set-Cookie', setJWTCookie(jwt));
+                return new Response(null, { status: 302, headers: { ...headers, 'Location': env.WEBSITE_URL } });
+            } catch (err) {
+                return Response.redirect(env.WEBSITE_URL + '/?error=login_failed', 302);
+            }
+        }
+
+        // /logout
+        if (path === '/logout') {
+            headers.set('Set-Cookie', 'mac_sid=; Path=/; Max-Age=0;');
+            return new Response(null, { status: 302, headers: { ...headers, 'Location': '/' } });
+        }
+
+        // /api/auth/status
+        if (path === '/api/auth/status') {
+            return new Response(JSON.stringify({
+                loggedIn: !!session?.user,
+                user: session?.user || null
+            }), {
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers }
+            });
+        }
+
+        // Vorheriger Endpunkt: /create-checkout-session
+        // ...existing code for /create-checkout-session wurde entfernt oder kommentiert...
+
+        if (path === '/create-checkout-session' && method === 'POST') {
+            const body = await request.json();
+            const { email } = body;
+            if (!email) {
+                return new Response(JSON.stringify({ error: 'Email erforderlich' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            try {
+                const session = await stripe.checkout.sessions.create({
+                    mode: 'setup',
+                    customer_email: email,
+                    payment_method_types: ['card', 'sepa_debit'], // optional: weitere Zahlungsmethoden ergänzen
+                    success_url: `${env.WEBSITE_URL}/payment-setup-success?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: `${env.WEBSITE_URL}/payment-setup-cancel`
+                });
+                return new Response(JSON.stringify({ url: session.url }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (error) {
+                return new Response(JSON.stringify({ error: error.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+        // Fallback für nicht erkannte Routen mit 404 Weiterleitung
+        return new Response(null, {
+            status: 404,
+            headers: { 'Location': env.WEBSITE_URL + '/error-pages/404.html', ...headers }
+        });
+    }
+}
