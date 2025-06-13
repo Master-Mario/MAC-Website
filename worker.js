@@ -98,28 +98,30 @@ export default {
 
                 const jwt = await signJWT({ user });
                 headers.set('Set-Cookie', setJWTCookie(jwt));
-                return new Response(null, { status: 302, headers: { ...headers, 'Location': env.WEBSITE_URL } });
+                headers.set('Location', env.WEBSITE_URL);
+                return new Response(null, { status: 302, headers });
             } catch (err) {
                 return Response.redirect(env.WEBSITE_URL + '/?error=login_failed', 302);
             }
         }
-
+        
         // /logout
         if (path === '/logout') {
             headers.set('Set-Cookie', 'mac_sid=; Path=/; Max-Age=0;');
-            return new Response(null, { status: 302, headers: { ...headers, 'Location': '/' } });
+            headers.set('Location', '/');
+            return new Response(null, { status: 302, headers });
         }
-
+        
         // /api/auth/status
         if (path === '/api/auth/status') {
+            headers.set('Content-Type', 'application/json');
+            headers.set('Cache-Control', 'no-store');
             return new Response(JSON.stringify({
                 loggedIn: !!session?.user,
                 user: session?.user || null
-            }), {
-                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers }
-            });
+            }), { headers });
         }
-
+        
         // Vorheriger Endpunkt: /create-checkout-session
         // ...existing code for /create-checkout-session wurde entfernt oder kommentiert...
 
