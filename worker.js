@@ -156,16 +156,16 @@ export default {
                 });
             }
 
-            // Mojang API: Username -> UUID
+            // PlayerDB API: Username -> UUID
             let minecraftUuid;
             try {
-                const mojangRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(minecraftUsername)}`);
-                if (!mojangRes.ok) throw new Error("Mojang API Fehler");
-                const mojangData = await mojangRes.json();
-                minecraftUuid = mojangData.id;
+                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraftUsername)}`);
+                if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler");
+                const playerdbData = await playerdbRes.json();
+                minecraftUuid = playerdbData?.data?.player?.id;
                 if (!minecraftUuid) throw new Error("UUID nicht gefunden");
             } catch (err) {
-                return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder Mojang API Fehler' }), {
+                return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
