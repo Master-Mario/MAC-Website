@@ -1,7 +1,7 @@
 name = "mac-login-worker"
 main = "worker.js"
 compatibility_date = "2024-06-01"
-assets = { directory = "./mac-homepage", binding = "ASSETS", html_handling = "force-trailing-slash", not_found_handling = "404-page" }
+assets = { directory = "./mac-homepage", binding = "ASSETS", html_handling = "drop-trailing-slash", not_found_handling = "404-page" }
 routes = [
     { pattern = "mac-netzwerk.net", custom_domain = true }
 ]

@@ -98,7 +98,8 @@ export default {
 
                 const jwt = await signJWT({ user });
                 headers.set('Set-Cookie', setJWTCookie(jwt));
-                return new Response(null, { status: 302, headers: { ...headers, 'Location': env.WEBSITE_URL } });
+                headers.set('Location', env.WEBSITE_URL);
+                return new Response(null, { status: 302, headers });
             } catch (err) {
                 return Response.redirect(env.WEBSITE_URL + '/?error=login_failed', 302);
             }
@@ -107,31 +108,69 @@ export default {
         // /logout
         if (path === '/logout') {
             headers.set('Set-Cookie', 'mac_sid=; Path=/; Max-Age=0;');
-            return new Response(null, { status: 302, headers: { ...headers, 'Location': '/' } });
+            headers.set('Location', '/');
+            return new Response(null, { status: 302, headers });
         }
 
         // /api/auth/status
         if (path === '/api/auth/status') {
+            headers.set('Content-Type', 'application/json');
+            headers.set('Cache-Control', 'no-store');
             return new Response(JSON.stringify({
                 loggedIn: !!session?.user,
                 user: session?.user || null
-            }), {
-                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers }
-            });
+            }), { headers });
+        }
+
+        // Hilfsfunktion: Stellt sicher, dass die Tabelle payment_setups existiert
+        async function ensurePaymentSetupsTable(env) {
+            // Prüfe, ob Tabelle existiert
+            const check = await env.DB.prepare(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='payment_setups';"
+            ).first();
+            if (!check) {
+                // Tabelle anlegen (minecraft_uuid als PRIMARY KEY)
+                await env.DB.prepare(`
+                    CREATE TABLE payment_setups (
+                        minecraft_uuid TEXT PRIMARY KEY,
+                        email TEXT NOT NULL,
+                        stripe_id TEXT NOT NULL,
+                        payment_authorized BOOLEAN NOT NULL DEFAULT false,
+                        payment_method TEXT NOT NULL DEFAULT 'unknown'
+                    );
+                `).run();
+            }
         }
 
         // Vorheriger Endpunkt: /create-checkout-session
         // ...existing code for /create-checkout-session wurde entfernt oder kommentiert...
 
         if (path === '/create-checkout-session' && method === 'POST') {
+            await ensurePaymentSetupsTable(env);
             const body = await request.json();
-            const { email } = body;
-            if (!email) {
-                return new Response(JSON.stringify({ error: 'Email erforderlich' }), {
+            const { email, minecraftUsername } = body;
+            if (!email || !minecraftUsername) {
+                return new Response(JSON.stringify({ error: 'Daten erforderlich' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
+
+            // Mojang API: Username -> UUID
+            let minecraftUuid;
+            try {
+                const mojangRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(minecraftUsername)}`);
+                if (!mojangRes.ok) throw new Error("Mojang API Fehler");
+                const mojangData = await mojangRes.json();
+                minecraftUuid = mojangData.id;
+                if (!minecraftUuid) throw new Error("UUID nicht gefunden");
+            } catch (err) {
+                return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder Mojang API Fehler' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
             try {
                 // Verwende den offiziellen Stripe HTTP API Aufruf
                 const stripeUrl = 'https://api.stripe.com/v1/checkout/sessions';
@@ -153,6 +192,21 @@ export default {
                 });
                 const session = await stripeRes.json();
                 if (!stripeRes.ok) throw new Error(session.error ? session.error.message : 'Stripe API Fehler');
+
+                // D1 Database Integration: Speichere Minecraft UUID, Email, Stripe Session ID, Zahlungserlaubnis und Methode
+                try {
+                    await env.DB.prepare(
+                        "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, payment_method) VALUES (?, ?, ?, ?, ?)"
+                    )
+                        .bind(minecraftUuid, email, session.id, false, "unknown")
+                        .run();
+                } catch (err) {
+                    return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+
                 return new Response(JSON.stringify({ url: session.url }), {
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -162,6 +216,35 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
+        }
+
+        if (path === '/payment-setup-success') {
+            await ensurePaymentSetupsTable(env);
+            const sessionId = url.searchParams.get('session_id');
+            if (!sessionId) {
+                return new Response(JSON.stringify({ error: 'Session ID fehlt' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            // Update payment_authorized und payment_method in der Datenbank
+            try {
+                await env.DB.prepare(
+                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ? WHERE stripe_id = ?"
+                )
+                    .bind(true, "stripe", sessionId)
+                    .run();
+            } catch (err) {
+                return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            return new Response(JSON.stringify({ message: 'Zahlung erfolgreich', sessionId }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
         // Fallback für nicht erkannte Routen mit 404 Weiterleitung
         return new Response(null, {
