@@ -11,7 +11,7 @@ DISCORD_CALLBACK_URL = "https://mac-netzwerk.net/login/callback"
 WEBSITE_URL = "https://mac-netzwerk.net"
 
 [[d1_databases]]
-binding = "<BINDING_NAME>"
+binding = "DB"
 database_name = "mac-db"
 database_id = "b7b88538-a490-4afc-8eda-01ca73573ddb"
 
