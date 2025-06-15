@@ -236,6 +236,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const isAGB = window.location.pathname.endsWith('agb.html');
     const isDatenschutz = window.location.pathname.endsWith('datenschutz.html');
     if (isAGB || isDatenschutz) {
+        // Cookie-Banner sofort verstecken, falls es im HTML existiert
+        const cookieBanner = document.getElementById('cookieBanner');
+        if (cookieBanner) {
+            cookieBanner.classList.add('hide');
+            cookieBanner.style.display = 'none';
+        }
         // Login-Button suchen
         const loginBtn = document.getElementById('discordLoginBtn');
         if (loginBtn) {
@@ -245,29 +251,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         // Funktion zum Anzeigen des Cookie-Banners
         function showCookieBanner() {
-            if (!document.getElementById('cookieBanner')) {
-                const banner = document.createElement('div');
+            let banner = document.getElementById('cookieBanner');
+            if (!banner) {
+                banner = document.createElement('div');
                 banner.id = 'cookieBanner';
                 banner.className = 'cookie-banner';
                 banner.innerHTML = `
-                    <div class="cookie-banner-overlay"></div>
-                    <div class="cookie-banner-center">
-                        <div class="cookie-banner-content">
-                            <span class="cookie-banner-text">Diese Website verwendet Cookies für Login und Zahlungsabwicklung. Mehr dazu in der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>.</span>
-                            <button id="acceptCookiesBtn" class="cookie-banner-btn">Verstanden</button>
+                    <div class=\"cookie-banner-overlay\"></div>
+                    <div class=\"cookie-banner-center\">
+                        <div class=\"cookie-banner-content\">
+                            <span class=\"cookie-banner-text\">Diese Website verwendet Cookies für Login und Zahlungsabwicklung. Mehr dazu in der <a href=\"datenschutz.html\" target=\"_blank\">Datenschutzerklärung</a>.</span>
+                            <button id=\"acceptCookiesBtn\" class=\"cookie-banner-btn\">Verstanden</button>
                         </div>
                     </div>
                 `;
                 document.body.appendChild(banner);
+            } else {
+                banner.style.display = '';
             }
-            const cookieBanner = document.getElementById('cookieBanner');
-            const acceptBtn = document.getElementById('acceptCookiesBtn');
-            cookieBanner.classList.remove('hide');
+            banner.classList.remove('hide');
             disablePage(true);
+            const acceptBtn = document.getElementById('acceptCookiesBtn');
             if (acceptBtn) {
                 acceptBtn.addEventListener('click', function() {
                     setCookie('mac_cookies_accepted', '1', 365);
-                    cookieBanner.classList.add('hide');
+                    banner.classList.add('hide');
+                    banner.style.display = 'none';
                     disablePage(false);
                     const overlay = document.querySelector('.cookie-banner-overlay');
                     if (overlay) overlay.style.display = 'none';
