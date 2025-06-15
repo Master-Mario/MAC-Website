@@ -242,11 +242,13 @@ export default {
                 });
             }
 
-            return new Response(JSON.stringify({ message: 'Zahlung erfolgreich', sessionId }), {
-                headers: { 'Location': env.WEBSITE_URL + '/payment_success' }
+            // Weiterleitung mit session_id als Query-Parameter
+            return new Response(null, {
+                status: 303,
+                headers: { 'Location': env.WEBSITE_URL + '/payment_success?session_id=' + encodeURIComponent(sessionId) }
             });
         }
-        // --- Stripe Session Info Endpoint für Frontend ---
+        // --- Stripe Session Information Endpoint für Frontend ---
         if (path === '/api/stripe/session' && method === 'GET') {
             const sessionId = url.searchParams.get('session_id');
             if (!sessionId) {
