@@ -274,6 +274,43 @@ export default {
                 });
             }
         }
+        // --- D1-API: Minecraft-Username anhand der Stripe-Session-ID ausgeben ---
+        if (path === '/api/d1/minecraft-username' && method === 'GET') {
+            const sessionId = url.searchParams.get('session_id');
+            if (!sessionId) {
+                return new Response(JSON.stringify({ error: 'Session ID fehlt' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            await ensurePaymentSetupsTable(env);
+            // Suche nach passendem Eintrag in D1
+            const row = await env.DB.prepare(
+                'SELECT minecraft_uuid FROM payment_setups WHERE stripe_id = ?'
+            ).bind(sessionId).first();
+            if (!row || !row.minecraft_uuid) {
+                return new Response(JSON.stringify({ error: 'Kein Eintrag gefunden' }), {
+                    status: 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Hole Username von PlayerDB API
+            let minecraftUsername = row.minecraft_uuid;
+            try {
+                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${minecraftUsername}`);
+                if (playerdbRes.ok) {
+                    const playerdbData = await playerdbRes.json();
+                    if (playerdbData && playerdbData.data && playerdbData.data.player && playerdbData.data.player.username) {
+                        minecraftUsername = playerdbData.data.player.username;
+                    }
+                }
+            } catch (err) {
+                // Fallback: UUID anzeigen
+            }
+            return new Response(JSON.stringify({ minecraftUsername }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
         // Fallback für nicht erkannte Routen mit 404 Weiterleitung
         return new Response(null, {
             status: 404,
