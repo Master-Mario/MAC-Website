@@ -243,7 +243,7 @@ export default {
             }
 
             return new Response(JSON.stringify({ message: 'Zahlung erfolgreich', sessionId }), {
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Location': env.WEBSITE_URL + '/payment_success' }
             });
         }
         // --- Stripe Session Info Endpoint für Frontend ---
