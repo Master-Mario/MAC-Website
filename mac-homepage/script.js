@@ -232,18 +232,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- Cookie Banner Script ---
 document.addEventListener('DOMContentLoaded', function() {
+    // Cookie-Banner dynamisch einfügen, falls noch nicht vorhanden
+    if (!document.getElementById('cookieBanner')) {
+        const banner = document.createElement('div');
+        banner.id = 'cookieBanner';
+        banner.className = 'cookie-banner';
+        banner.innerHTML = `
+            <div class="cookie-banner-content">
+                <span class="cookie-banner-text">Diese Website verwendet Cookies für Login und Zahlungsabwicklung. Mehr dazu in der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>.</span>
+                <button id="acceptCookiesBtn" class="cookie-banner-btn">Verstanden</button>
+            </div>
+        `;
+        document.body.appendChild(banner);
+    }
     const cookieBanner = document.getElementById('cookieBanner');
     const acceptBtn = document.getElementById('acceptCookiesBtn');
-    if (!cookieBanner || !acceptBtn) return;
-    // Prüfen, ob bereits akzeptiert
-    if (localStorage.getItem('mac_cookies_accepted') === '1') {
+    // Cookie prüfen
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    function setCookie(name, value, days) {
+        let expires = '';
+        if (days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+    }
+    if (getCookie('mac_cookies_accepted') === '1') {
         cookieBanner.classList.add('hide');
     } else {
         cookieBanner.classList.remove('hide');
     }
-    acceptBtn.addEventListener('click', function() {
-        localStorage.setItem('mac_cookies_accepted', '1');
-        cookieBanner.classList.add('hide');
-    });
+    if (acceptBtn) {
+        acceptBtn.addEventListener('click', function() {
+            setCookie('mac_cookies_accepted', '1', 365);
+            cookieBanner.classList.add('hide');
+        });
+    }
 });
 // --- Cookie Banner Script ---

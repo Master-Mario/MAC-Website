@@ -670,41 +670,73 @@ footer {
     position: fixed;
     bottom: 0;
     left: 0;
-    width: 100%;
-    background: rgba(0,0,0,0.97);
+    width: 100vw;
+    background: rgba(30, 30, 30, 0.98);
     color: #fff;
-    padding: 1rem 2rem;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
     z-index: 3000;
-    font-size: 1rem;
-    box-shadow: 0 -2px 16px rgba(0,0,0,0.2);
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-.cookie-banner a {
-    color: #ff0023;
-    text-decoration: underline;
-}
-.cookie-banner button {
-    background: #ff0023;
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    padding: 8px 22px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.cookie-banner button:hover {
-    background: #ff4757;
+    font-size: 1.05rem;
+    box-shadow: 0 -4px 32px rgba(255,0,35,0.10), 0 -1px 0 #ff0023;
+    opacity: 1;
+    transition: transform 0.4s cubic-bezier(.4,2,.6,1), opacity 0.3s;
+    padding: 0;
+    min-height: 0;
+    border-radius: 18px 18px 0 0;
+    animation: cookieBannerIn 0.7s cubic-bezier(.4,2,.6,1);
 }
 .cookie-banner.hide {
     opacity: 0;
     pointer-events: none;
     transform: translateY(100%);
+}
+.cookie-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.2rem 2.5rem;
+    background: rgba(40,40,40,0.98);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 2px 16px rgba(255,0,35,0.08);
+    border: 1px solid #ff0023;
+}
+.cookie-banner-text {
+    color: #fff;
+    font-size: 1.05rem;
+    line-height: 1.5;
+}
+.cookie-banner-btn {
+    background: linear-gradient(45deg, #ff0023, #ff4757);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 32px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(255,0,35,0.10);
+    transition: background 0.2s, transform 0.2s;
+    outline: none;
+}
+.cookie-banner-btn:hover {
+    background: #ff0023;
+    transform: translateY(-2px) scale(1.04);
+}
+@keyframes cookieBannerIn {
+    0% { opacity: 0; transform: translateY(100%); }
+    80% { opacity: 1; transform: translateY(-10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 600px) {
+    .cookie-banner-content {
+        flex-direction: column;
+        gap: 0.7rem;
+        padding: 1rem 0.5rem;
+    }
+    .cookie-banner {
+        font-size: 0.95rem;
+    }
 }
 
 /* Animations */
