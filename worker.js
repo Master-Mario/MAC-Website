@@ -246,6 +246,34 @@ export default {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+        // --- Stripe Session Info Endpoint für Frontend ---
+        if (path === '/api/stripe/session' && method === 'GET') {
+            const sessionId = url.searchParams.get('session_id');
+            if (!sessionId) {
+                return new Response(JSON.stringify({ error: 'Session ID fehlt' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Stripe Session abfragen
+            try {
+                const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
+                    }
+                });
+                const session = await stripeRes.json();
+                if (!stripeRes.ok) throw new Error(session.error ? session.error.message : 'Stripe API Fehler');
+                return new Response(JSON.stringify(session), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (err) {
+                return new Response(JSON.stringify({ error: 'Stripe API Fehler: ' + err.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
         // Fallback für nicht erkannte Routen mit 404 Weiterleitung
         return new Response(null, {
             status: 404,
