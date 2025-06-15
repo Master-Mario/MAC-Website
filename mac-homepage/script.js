@@ -233,8 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- Cookie Banner Script ---
 document.addEventListener('DOMContentLoaded', function() {
     // Cookie-Banner auf AGB und Datenschutzseite erst nach Login-Klick anzeigen
-    const isAGB = window.location.pathname.endsWith('agb.html');
-    const isDatenschutz = window.location.pathname.endsWith('datenschutz.html');
+    const isAGB = /agb(\.|$)/.test(window.location.pathname);
+    const isDatenschutz = /datenschutz(\.|$)/.test(window.location.pathname);
     if (isAGB || isDatenschutz) {
         // Cookie-Banner sofort verstecken, falls es im HTML existiert
         const cookieBanner = document.getElementById('cookieBanner');
