@@ -267,9 +267,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     function disablePage(disabled) {
         if (disabled) {
+            // Blockiere alle Interaktionen, aber ohne Blur/Filter
             document.body.classList.add('cookies-blocked');
+            // Füge einen unsichtbaren Overlay-Div hinzu, falls nicht vorhanden
+            if (!document.getElementById('cookieBlockerOverlay')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'cookieBlockerOverlay';
+                overlay.style.position = 'fixed';
+                overlay.style.inset = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.zIndex = '2999';
+                overlay.style.background = 'transparent';
+                overlay.style.pointerEvents = 'all';
+                overlay.tabIndex = 0;
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.appendChild(overlay);
+            }
         } else {
             document.body.classList.remove('cookies-blocked');
+            // Entferne Overlay falls vorhanden
+            const overlay = document.getElementById('cookieBlockerOverlay');
+            if (overlay) overlay.remove();
         }
     }
     if (getCookie('mac_cookies_accepted') === '1') {

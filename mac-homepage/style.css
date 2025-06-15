@@ -681,6 +681,9 @@ footer {
     opacity: 1;
     transition: opacity 0.3s;
 }
+.cookie-banner a {
+    color: #c82333;
+}
 .cookie-banner.hide {
     opacity: 0;
     pointer-events: none;
@@ -751,7 +754,7 @@ footer {
 .cookies-blocked *:not(.cookie-banner):not(.cookie-banner *) {
     pointer-events: none !important;
     user-select: none !important;
-    filter: blur(2px) grayscale(0.2) brightness(0.7);
+    filter: none !important;
 }
 .cookies-blocked {
     overflow: hidden !important;
