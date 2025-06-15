@@ -759,6 +759,26 @@ footer {
 .cookies-blocked {
     overflow: hidden !important;
 }
+/* Overlay für Cookie-Blockierung */
+#cookieBlockerOverlay {
+    display: block;
+}
+.cookies-blocked.hide #cookieBlockerOverlay {
+    display: none !important;
+}
+.cookies-blocked.hide {
+    overflow: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+.cookies-blocked.show {
+    overflow: hidden !important;
+    pointer-events: all !important;
+    opacity: 1 !important;
+    transition: opacity 0.3s ease, visibility 0s linear 0s;
+}
+
 @media (max-width: 600px) {
     .cookie-banner-content {
         min-width: 0;
