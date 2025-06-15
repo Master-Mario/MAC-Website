@@ -665,6 +665,48 @@ footer {
 /* END Logout Confirmation Modal */
 
 
+/* Cookie Banner */
+.cookie-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0,0,0,0.97);
+    color: #fff;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    z-index: 3000;
+    font-size: 1rem;
+    box-shadow: 0 -2px 16px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.cookie-banner a {
+    color: #ff0023;
+    text-decoration: underline;
+}
+.cookie-banner button {
+    background: #ff0023;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 22px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.cookie-banner button:hover {
+    background: #ff4757;
+}
+.cookie-banner.hide {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(100%);
+}
+
 /* Animations */
 @keyframes fadeInUp {
     from {

@@ -229,3 +229,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 // --- Stripe Payment Script End ---
+
+// --- Cookie Banner Script ---
+document.addEventListener('DOMContentLoaded', function() {
+    const cookieBanner = document.getElementById('cookieBanner');
+    const acceptBtn = document.getElementById('acceptCookiesBtn');
+    if (!cookieBanner || !acceptBtn) return;
+    // Prüfen, ob bereits akzeptiert
+    if (localStorage.getItem('mac_cookies_accepted') === '1') {
+        cookieBanner.classList.add('hide');
+    } else {
+        cookieBanner.classList.remove('hide');
+    }
+    acceptBtn.addEventListener('click', function() {
+        localStorage.setItem('mac_cookies_accepted', '1');
+        cookieBanner.classList.add('hide');
+    });
+});
+// --- Cookie Banner Script ---
