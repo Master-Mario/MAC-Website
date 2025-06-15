@@ -238,9 +238,12 @@ document.addEventListener('DOMContentLoaded', function() {
         banner.id = 'cookieBanner';
         banner.className = 'cookie-banner';
         banner.innerHTML = `
-            <div class="cookie-banner-content">
-                <span class="cookie-banner-text">Diese Website verwendet Cookies für Login und Zahlungsabwicklung. Mehr dazu in der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>.</span>
-                <button id="acceptCookiesBtn" class="cookie-banner-btn">Verstanden</button>
+            <div class="cookie-banner-overlay"></div>
+            <div class="cookie-banner-center">
+                <div class="cookie-banner-content">
+                    <span class="cookie-banner-text">Diese Website verwendet Cookies für Login und Zahlungsabwicklung. Mehr dazu in der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>.</span>
+                    <button id="acceptCookiesBtn" class="cookie-banner-btn">Verstanden</button>
+                </div>
             </div>
         `;
         document.body.appendChild(banner);
@@ -262,15 +265,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
     }
+    function disablePage(disabled) {
+        if (disabled) {
+            document.body.classList.add('cookies-blocked');
+        } else {
+            document.body.classList.remove('cookies-blocked');
+        }
+    }
     if (getCookie('mac_cookies_accepted') === '1') {
         cookieBanner.classList.add('hide');
+        disablePage(false);
     } else {
         cookieBanner.classList.remove('hide');
+        disablePage(true);
     }
     if (acceptBtn) {
         acceptBtn.addEventListener('click', function() {
             setCookie('mac_cookies_accepted', '1', 365);
             cookieBanner.classList.add('hide');
+            disablePage(false);
         });
     }
 });
