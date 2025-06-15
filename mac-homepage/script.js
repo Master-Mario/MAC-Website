@@ -294,6 +294,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (getCookie('mac_cookies_accepted') === '1') {
         cookieBanner.classList.add('hide');
         disablePage(false);
+        const overlay = document.querySelector('.cookie-banner-overlay');
+        if (overlay) overlay.style.display = 'none';
     } else {
         cookieBanner.classList.remove('hide');
         disablePage(true);
@@ -303,7 +305,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setCookie('mac_cookies_accepted', '1', 365);
             cookieBanner.classList.add('hide');
             disablePage(false);
-            // Cookie-Banner-Overlay wirklich entfernen
             const overlay = document.querySelector('.cookie-banner-overlay');
             if (overlay) overlay.style.display = 'none';
         });
