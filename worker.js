@@ -144,10 +144,11 @@ export default {
             } else {
                 // Prüfe, ob Spalte created_at und canceled_at existieren, falls nicht, füge sie hinzu
                 const columns = await env.DB.prepare("PRAGMA table_info(payment_setups);").all();
-                if (!columns.some(col => col.name === 'created_at')) {
+                const colArray = columns.results || columns; // Fallback falls .results nicht existiert
+                if (!colArray.some(col => col.name === 'created_at')) {
                     await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT NOT NULL DEFAULT (datetime('now')); ").run();
                 }
-                if (!columns.some(col => col.name === 'canceled_at')) {
+                if (!colArray.some(col => col.name === 'canceled_at')) {
                     await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT DEFAULT NULL;").run();
                 }
             }
@@ -409,4 +410,3 @@ export default {
         });
     }
 }
-
