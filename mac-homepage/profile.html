@@ -228,44 +228,5 @@
         </div>
     </div>
     <script src="script.js"></script>
-    <script>
-    // Profilinfos aus Auth-API holen und anzeigen
-    document.addEventListener('DOMContentLoaded', async function() {
-        const avatar = document.getElementById('profileAvatar');
-        const name = document.getElementById('profileName');
-        const logoutBtn = document.getElementById('logoutBtn');
-        try {
-            const res = await fetch('/api/auth/status', { credentials: 'include' });
-            const data = await res.json();
-            if (data.loggedIn && data.user) {
-                name.textContent = data.user.username;
-                if (data.user.id && data.user.avatar) {
-                    avatar.src = `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`;
-                } else {
-                    avatar.src = 'logos/favicon-32x32.png';
-                }
-            } else {
-                window.location.href = '/login';
-            }
-        } catch (e) {
-            window.location.href = '/login';
-        }
-        // Logout-Dialog anzeigen
-        logoutBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            document.getElementById('logoutConfirmationModal').classList.add('open');
-        });
-        document.getElementById('confirmLogoutBtn').addEventListener('click', async function() {
-            await fetch('/logout', { credentials: 'include' });
-            window.location.href = '/';
-        });
-        document.getElementById('cancelLogoutBtn').addEventListener('click', function() {
-            document.getElementById('logoutConfirmationModal').classList.remove('open');
-        });
-        document.getElementById('logoutConfirmationModal').addEventListener('click', function(e) {
-            if (e.target === this) this.classList.remove('open');
-        });
-    });
-    </script>
 </body>
 </html>
