@@ -140,7 +140,7 @@
                 <div class="abo-row"><span class="abo-label">Minecraft Username:</span><span class="abo-value" id="aboMc">-</span></div>
                 <div class="abo-row"><span class="abo-label">Nächster Zahltag:</span><span class="abo-value" id="aboNextPay">-</span></div>
                 <div class="abo-row"><span class="abo-label">Aktueller Anteil:</span><span class="abo-value" id="aboAmount">-</span></div>
-                <div class="abo-row"><span class="abo-label">Zahlungsmethode:</span><span class="abo-value" id="aboMethod">-</span></div>
+                <div class="abo-row"><span class="abo-label">E-Mail:</span><span class="abo-value" id="aboEmail">-</span></div>
             </div>
             <div class="abo-cta" id="aboCta" style="display:none;">
                 <button class="btn-cancel" id="cancelAboBtn">Abo kündigen</button>
@@ -177,7 +177,7 @@
         const mcEl = document.getElementById('aboMc');
         const nextPayEl = document.getElementById('aboNextPay');
         const amountEl = document.getElementById('aboAmount');
-        const methodEl = document.getElementById('aboMethod');
+        const emailEl = document.getElementById('aboEmail');
         const cancelBtn = document.getElementById('cancelAboBtn');
         const cancelModal = document.getElementById('cancelModal');
         const confirmCancelBtn = document.getElementById('confirmCancelBtn');
@@ -212,7 +212,7 @@
                 mcEl.textContent = abo.minecraft_username || '-';
                 nextPayEl.textContent = abo.next_pay ? new Date(abo.next_pay).toLocaleDateString('de-AT') : '-';
                 amountEl.textContent = (abo.amount && !isNaN(abo.amount)) ? (Number(abo.amount).toFixed(2) + ' €') : '-';
-                methodEl.textContent = abo.method ? abo.method : '-';
+                emailEl.textContent = abo.email ? abo.method : '-';
                 // Nur wenn aktiv, Button anzeigen
                 if (abo.active) {
                     aboCta.style.display = 'flex';
