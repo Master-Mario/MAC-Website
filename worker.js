@@ -212,6 +212,13 @@ export default {
                         .bind(minecraftUuid, email, session.id, false, "unknown", new Date().toISOString(), null)
                         .run();
                 } catch (err) {
+                    // Prüfe auf UNIQUE constraint (doppelter Eintrag)
+                    if (err.message && err.message.includes('UNIQUE')) {
+                        return new Response(JSON.stringify({ error: 'Du bist bereits registriert. Bitte verwende deinen bestehenden Account.' }), {
+                            status: 400,
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    }
                     return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
                         status: 500,
                         headers: { 'Content-Type': 'application/json' }
@@ -402,3 +409,4 @@ export default {
         });
     }
 }
+
