@@ -215,10 +215,29 @@
                 nextPayEl.textContent = abo.next_pay ? new Date(abo.next_pay).toLocaleDateString('de-AT') : '-';
                 amountEl.textContent = (abo.amount && !isNaN(abo.amount)) ? (Number(abo.amount).toFixed(2) + ' €') : '-';
                 emailEl.textContent = abo.email ? abo.email : '-';
-                // Nur wenn aktiv und nicht gekündigt, Button anzeigen
-                if (abo.active && abo.canceled_at === null) {
+                // Kündigungsdatum anzeigen, falls vorhanden
+                if (abo.canceled_at) {
+                    statusEl.textContent = 'Gekündigt';
+                    statusEl.classList.add('inactive');
+                    aboCta.style.display = 'none';
+                    // Kündigungsdatum anzeigen
+                    sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : '-';
+                    // Zeige das Kündigungsdatum im Hinweistext
+                    const aboNote = document.getElementById('aboNote');
+                    if (aboNote) {
+                        aboNote.textContent = 'Dein Abo wurde am ' + new Date(abo.canceled_at).toLocaleDateString('de-AT') + ' gekündigt. Du kannst dich jederzeit erneut registrieren.';
+                    }
+                } else if (abo.active) {
+                    statusEl.textContent = 'Aktiv';
+                    statusEl.classList.remove('inactive');
                     aboCta.style.display = 'flex';
+                    const aboNote = document.getElementById('aboNote');
+                    if (aboNote) {
+                        aboNote.textContent = 'Du kannst dein Abo jederzeit kündigen.';
+                    }
                 } else {
+                    statusEl.textContent = 'Inaktiv';
+                    statusEl.classList.add('inactive');
                     aboCta.style.display = 'none';
                 }
             } else {
@@ -230,6 +249,11 @@
             statusEl.textContent = 'Nicht registriert';
             statusEl.classList.add('inactive');
             aboCta.style.display = 'none';
+            // Hinweistext für erneute Registrierung
+            const aboNote = document.getElementById('aboNote');
+            if (aboNote) {
+                aboNote.textContent = 'Du hast aktuell kein aktives Abo. Du kannst dich jederzeit erneut registrieren.';
+            }
         }
         // Kündigungs-Modal-Logik
         cancelBtn.addEventListener('click', function() {
@@ -247,7 +271,7 @@
             try {
                 const res = await fetch('/api/d1/abo-kuendigen', { method: 'POST', credentials: 'include' });
                 if (res.ok) {
-                    statusEl.textContent = 'Gekündigt (bis Monatsende aktiv)';
+                    statusEl.textContent = 'Gekündigt';
                     statusEl.classList.add('inactive');
                     cancelModal.classList.remove('open');
                     cancelBtn.disabled = true;
@@ -265,4 +289,3 @@
     </script>
 </body>
 </html>
-

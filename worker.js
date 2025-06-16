@@ -209,28 +209,42 @@ export default {
 
                 // D1 Database Integration: Speichere Minecraft UUID, Email, Stripe Session ID, Zahlungserlaubnis und Methode
                 try {
-                    await env.DB.prepare(
-                        "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, payment_method, created_at, canceled_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-                    )
-                        .bind(minecraftUuid, email, session.id, false, "unknown", new Date().toISOString(), null)
-                        .run();
-                } catch (err) {
-                    // Prüfe auf UNIQUE constraint (doppelter Eintrag)
-                    if (err.message && err.message.includes('UNIQUE')) {
-                        return new Response(JSON.stringify({ error: 'Du bist bereits registriert. Bitte verwende deinen bestehenden Account.' }), {
-                            status: 400,
-                            headers: { 'Content-Type': 'application/json' }
-                        });
+                    // Prüfe, ob es einen bestehenden Eintrag mit dieser UUID oder E-Mail gibt
+                    const existing = await env.DB.prepare("SELECT * FROM payment_setups WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, email).first();
+                    if (existing) {
+                        // Wenn gekündigt, erneute Registrierung erlauben (neuer Eintrag)
+                        if (existing.canceled_at) {
+                            // Optional: alten Eintrag deaktivieren (falls noch nicht geschehen)
+                            await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 0 WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, email).run();
+                            // Neuen Eintrag anlegen (neue Stripe-Session, neue Registrierung)
+                            await env.DB.prepare(
+                                "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, payment_method, created_at, canceled_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                            )
+                                .bind(minecraftUuid, email, session.id, false, "unknown", new Date().toISOString(), null)
+                                .run();
+                        } else {
+                            return new Response(JSON.stringify({ error: 'Du bist bereits registriert. Bitte verwende deinen bestehenden Account.' }), {
+                                status: 400,
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                        }
+                    } else {
+                        // Kein bestehender Eintrag: normal anlegen
+                        await env.DB.prepare(
+                            "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, payment_method, created_at, canceled_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                        )
+                            .bind(minecraftUuid, email, session.id, false, "unknown", new Date().toISOString(), null)
+                            .run();
                     }
+                    return new Response(JSON.stringify({ url: session.url }), {
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (err) {
                     return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
                         status: 500,
                         headers: { 'Content-Type': 'application/json' }
                     });
                 }
-
-                return new Response(JSON.stringify({ url: session.url }), {
-                    headers: { 'Content-Type': 'application/json' }
-                });
             } catch (error) {
                 return new Response(JSON.stringify({ error: error.message }), {
                     status: 500,
