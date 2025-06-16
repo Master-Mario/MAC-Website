@@ -102,6 +102,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </ul>
             `;
             userInfoDiv.appendChild(dropdown);
+
+            // Menüeinträge: Profil/Abonnement/Abmelden
+            document.getElementById('profileMenuLogout').addEventListener('click', showLogoutModal);
+            document.getElementById('profileMenuProfile').addEventListener('click', function() {
+                window.location.href = '/profile';
+            });
+            document.getElementById('profileMenuSubscription').addEventListener('click', function() {
+                window.location.href = '/abo';
+            });
         }
     }
 
@@ -189,20 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dropdown.classList.remove('open');
             }
         }
-    });
-    // Menüeinträge: Profil/Abonnement/Abmelden
-    document.addEventListener('DOMContentLoaded', function() {
-        document.body.addEventListener('click', function(e) {
-            if (e.target && e.target.id === 'profileMenuLogout') {
-                showLogoutModal();
-            }
-            if (e.target && e.target.id === 'profileMenuProfile') {
-                window.location.href = '/profile';
-            }
-            if (e.target && e.target.id === 'profileMenuSubscription') {
-                window.location.href = '/abo';
-            }
-        });
     });
 
     // Initial check
