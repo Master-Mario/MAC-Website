@@ -360,6 +360,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const registrationSection = document.getElementById('registrationSection');
     const loginPromptSection = document.getElementById('loginPromptSection');
     const bigDiscordLoginBtn = document.getElementById('bigDiscordLoginBtn');
+    // NEU: Section für "Für MAC-SMP registrieren & Kosten"
+    const smpSection = document.getElementById('mac-smp-registrierung');
 
     async function checkSmpAuthAndShowForm() {
         try {
@@ -367,15 +369,29 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Status nicht OK');
             const data = await response.json();
             if (data.loggedIn && data.user) {
+                // Prüfe, ob User bereits registriert ist (Abo vorhanden)
+                const aboRes = await fetch('/api/d1/abo-status', { credentials: 'include' });
+                if (aboRes.ok) {
+                    const abo = await aboRes.json();
+                    if (abo && (abo.active || abo.canceled_at)) {
+                        // User ist registriert (aktiv oder gekündigt): Section ausblenden
+                        if (smpSection) smpSection.style.display = 'none';
+                        return;
+                    }
+                }
+                // User ist eingeloggt, aber nicht registriert
                 if (registrationSection) registrationSection.style.display = 'block';
                 if (loginPromptSection) loginPromptSection.style.display = 'none';
+                if (smpSection) smpSection.style.display = '';
             } else {
                 if (registrationSection) registrationSection.style.display = 'none';
                 if (loginPromptSection) loginPromptSection.style.display = 'block';
+                if (smpSection) smpSection.style.display = '';
             }
         } catch (e) {
             if (registrationSection) registrationSection.style.display = 'none';
             if (loginPromptSection) loginPromptSection.style.display = 'block';
+            if (smpSection) smpSection.style.display = '';
         }
     }
     if (bigDiscordLoginBtn) {
