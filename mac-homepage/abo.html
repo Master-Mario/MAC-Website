@@ -206,15 +206,17 @@
             const res = await fetch('/api/d1/abo-status', { credentials: 'include' });
             if (res.ok) {
                 abo = await res.json();
-                statusEl.textContent = abo.active ? 'Aktiv' : 'Inaktiv';
-                statusEl.classList.toggle('inactive', !abo.active);
+                statusEl.textContent = (abo.canceled_at === null)
+                    ? (abo.active ? 'Aktiv' : 'Inaktiv')
+                    : 'Gekündigt';
+                statusEl.classList.toggle('inactive', !abo.active || abo.canceled_at !== null);
                 sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : '-';
                 mcEl.textContent = abo.minecraft_username || '-';
                 nextPayEl.textContent = abo.next_pay ? new Date(abo.next_pay).toLocaleDateString('de-AT') : '-';
                 amountEl.textContent = (abo.amount && !isNaN(abo.amount)) ? (Number(abo.amount).toFixed(2) + ' €') : '-';
                 emailEl.textContent = abo.email ? abo.email : '-';
-                // Nur wenn aktiv, Button anzeigen
-                if (abo.active) {
+                // Nur wenn aktiv und nicht gekündigt, Button anzeigen
+                if (abo.active && abo.canceled_at === null) {
                     aboCta.style.display = 'flex';
                 } else {
                     aboCta.style.display = 'none';
@@ -263,3 +265,4 @@
     </script>
 </body>
 </html>
+

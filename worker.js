@@ -136,9 +136,20 @@ export default {
                         email TEXT NOT NULL,
                         stripe_id TEXT NOT NULL,
                         payment_authorized BOOLEAN NOT NULL DEFAULT false,
-                        payment_method TEXT NOT NULL DEFAULT 'unknown'
+                        payment_method TEXT NOT NULL DEFAULT 'unknown',
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        canceled_at TEXT DEFAULT NULL
                     );
                 `).run();
+            } else {
+                // Prüfe, ob Spalte created_at und canceled_at existieren, falls nicht, füge sie hinzu
+                const columns = await env.DB.prepare("PRAGMA table_info(payment_setups);").all();
+                if (!columns.some(col => col.name === 'created_at')) {
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT NOT NULL DEFAULT (datetime('now')); ").run();
+                }
+                if (!columns.some(col => col.name === 'canceled_at')) {
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT DEFAULT NULL;").run();
+                }
             }
         }
 
@@ -196,9 +207,9 @@ export default {
                 // D1 Database Integration: Speichere Minecraft UUID, Email, Stripe Session ID, Zahlungserlaubnis und Methode
                 try {
                     await env.DB.prepare(
-                        "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, payment_method) VALUES (?, ?, ?, ?, ?)"
+                        "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, payment_method, created_at, canceled_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
                     )
-                        .bind(minecraftUuid, email, session.id, false, "unknown")
+                        .bind(minecraftUuid, email, session.id, false, "unknown", new Date().toISOString(), null)
                         .run();
                 } catch (err) {
                     return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
@@ -352,10 +363,35 @@ export default {
                 email: row.email,
                 stripe_id: row.stripe_id,
                 method: row.payment_method,
-                since: null, // Optional: Registrierungsdatum, falls vorhanden
+                since: row.created_at || null, // Registrierungsdatum
+                canceled_at: row.canceled_at || null, // Kündigungsdatum
                 next_pay: null, // Optional: Nächster Zahltag, falls berechnet
                 amount: null // Optional: Betrag, falls berechnet
             }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+        // --- D1-API: Abo kündigen ---
+        if (path === '/api/d1/abo-kuendigen' && method === 'POST') {
+            await ensurePaymentSetupsTable(env);
+            if (!session?.user?.email) {
+                return new Response(JSON.stringify({ error: 'Nicht eingeloggt oder keine E-Mail im Discord-Account' }), {
+                    status: 401,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Setze canceled_at auf jetzt
+            try {
+                await env.DB.prepare(
+                    'UPDATE payment_setups SET canceled_at = ? WHERE email = ?'
+                ).bind(new Date().toISOString(), session.user.email).run();
+            } catch (err) {
+                return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            return new Response(JSON.stringify({ success: true }), {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
