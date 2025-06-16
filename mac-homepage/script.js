@@ -116,8 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (response.ok) {
                 displayLoggedOutState();
-                // Optionally redirect to home or refresh
-                // window.location.href = '/';
+                window.location.reload(); // Seite nach Logout neu laden
             } else {
                 console.error('Logout failed:', response.status);
                 alert('Logout fehlgeschlagen.');
