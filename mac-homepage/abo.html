@@ -142,7 +142,7 @@
                 <div class="abo-row"><span class="abo-label">Aktueller Anteil:</span><span class="abo-value" id="aboAmount">-</span></div>
                 <div class="abo-row"><span class="abo-label">Zahlungsmethode:</span><span class="abo-value" id="aboMethod">-</span></div>
             </div>
-            <div class="abo-cta">
+            <div class="abo-cta" id="aboCta" style="display:none;">
                 <button class="btn-cancel" id="cancelAboBtn">Abo kündigen</button>
             </div>
             <div class="abo-note" id="aboNote">Du kannst dein Abo jederzeit zum Monatsende kündigen.</div>
@@ -151,7 +151,7 @@
     <!-- Kündigungs-Modal -->
     <div id="cancelModal" class="modal-overlay">
         <div class="modal-content">
-            <p>Möchtest du dein MAC-SMP Abo wirklich kündigen? Dein Zugang bleibt bis zum Monatsende erhalten.</p>
+            <p>Möchtest du dein MAC-SMP Abo wirklich kündigen? Du verlierst sofort Zugang zum MAC-SMP!</p>
             <div class="modal-actions">
                 <button id="confirmCancelBtn" class="btn btn-danger">Ja, kündigen</button>
                 <button id="cancelCancelBtn" class="btn btn-secondary">Abbrechen</button>
@@ -182,6 +182,7 @@
         const cancelModal = document.getElementById('cancelModal');
         const confirmCancelBtn = document.getElementById('confirmCancelBtn');
         const cancelCancelBtn = document.getElementById('cancelCancelBtn');
+        const aboCta = document.getElementById('aboCta');
         // 1. Userdaten holen
         let user = null;
         try {
@@ -212,13 +213,21 @@
                 nextPayEl.textContent = abo.next_pay ? new Date(abo.next_pay).toLocaleDateString('de-AT') : '-';
                 amountEl.textContent = abo.amount ? (abo.amount.toFixed(2) + ' €') : '-';
                 methodEl.textContent = abo.method ? abo.method : '-';
+                // Nur wenn aktiv, Button anzeigen
+                if (abo.active) {
+                    aboCta.style.display = 'flex';
+                } else {
+                    aboCta.style.display = 'none';
+                }
             } else {
                 statusEl.textContent = 'Nicht registriert';
                 statusEl.classList.add('inactive');
+                aboCta.style.display = 'none';
             }
         } catch (e) {
             statusEl.textContent = 'Nicht registriert';
             statusEl.classList.add('inactive');
+            aboCta.style.display = 'none';
         }
         // Kündigungs-Modal-Logik
         cancelBtn.addEventListener('click', function() {
@@ -254,4 +263,3 @@
     </script>
 </body>
 </html>
-
