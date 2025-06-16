@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mein Abo | MAC-Netzwerk</title>
+    <link rel="icon" type="image/png" href="logos/favicon-32x32.png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .abo-hero {
+            min-height: 70vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            animation: fadeInUp 1s;
+        }
+        .abo-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 18px;
+            padding: 2.5rem 2.5rem 2rem 2.5rem;
+            margin: 2rem auto 0 auto;
+            border: 1.5px solid rgba(255,0,35,0.22);
+            box-shadow: 0 8px 32px rgba(255,0,35,0.10);
+            animation: fadeInUp 1.2s 0.2s both;
+            max-width: 420px;
+        }
+        .abo-card h2 {
+            color: #ff0023;
+            margin-bottom: 1.2rem;
+            font-size: 2rem;
+        }
+        .abo-details {
+            margin-bottom: 1.5rem;
+        }
+        .abo-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.1rem;
+            font-size: 1.08rem;
+            gap: 1.5rem;
+        }
+        .abo-label {
+            color: #cccccc;
+        }
+        .abo-value {
+            color: #fff;
+            font-weight: 500;
+        }
+        .abo-status {
+            display: inline-block;
+            padding: 0.4rem 1.2rem;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            background: rgba(46, 213, 115, 0.18);
+            color: #2ed573;
+            border: 1px solid #2ed573;
+            margin-bottom: 1.2rem;
+            animation: popIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
+        }
+        .abo-status.inactive {
+            background: rgba(255, 71, 87, 0.18);
+            color: #ff4757;
+            border: 1px solid #ff4757;
+        }
+        .abo-cta {
+            margin-top: 2.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            align-items: center;
+            animation: fadeInUp 1s 0.4s both;
+        }
+        .btn-cancel {
+            background: transparent;
+            color: #ff4757;
+            border: 2px solid #ff4757;
+            padding: 12px 38px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-cancel:hover {
+            background: #ff4757;
+            color: #fff;
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 8px 32px rgba(255,71,87,0.25);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .abo-note {
+            color: #cccccc;
+            font-size: 0.98rem;
+            margin-top: 1.2rem;
+        }
+        @media (max-width: 600px) {
+            .abo-card { padding: 1.2rem 0.5rem 1.2rem 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">MAC-Netzwerk</a>
+            <ul class="nav-links">
+                <li><a href="index.html#home">Home</a></li>
+                <li><a href="index.html#server">Server</a></li>
+                <li><a href="https://mac-netzwerk.net/smp#regeln">Regeln</a></li>
+                <li><a href="https://mac-netzwerk.net/smp#mac-smp-registrierung">MAC-SMP Registrierung</a></li>
+                <li><a href="index.html#kontakt">Kontakt</a></li>
+                <li><a href="index.html#impressum">Impressum</a></li>
+                <li><a href="https://panel.mac-netzwerk.net/">Panel</a></li>
+            </ul>
+            <div class="auth-section">
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <img src="" alt="Avatar" class="avatar" id="userAvatar">
+                    <span class="username" id="userName"></span>
+                </div>
+            </div>
+            <div class="mobile-menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+    <section class="abo-hero">
+        <div class="abo-card" id="aboCard">
+            <h2>MAC-SMP Abonnement</h2>
+            <div id="aboStatus" class="abo-status">Lade Status...</div>
+            <div class="abo-details">
+                <div class="abo-row"><span class="abo-label">Registriert seit:</span><span class="abo-value" id="aboSince">-</span></div>
+                <div class="abo-row"><span class="abo-label">Minecraft Username:</span><span class="abo-value" id="aboMc">-</span></div>
+                <div class="abo-row"><span class="abo-label">Nächster Zahltag:</span><span class="abo-value" id="aboNextPay">-</span></div>
+                <div class="abo-row"><span class="abo-label">Aktueller Anteil:</span><span class="abo-value" id="aboAmount">-</span></div>
+                <div class="abo-row"><span class="abo-label">Zahlungsmethode:</span><span class="abo-value" id="aboMethod">-</span></div>
+            </div>
+            <div class="abo-cta">
+                <button class="btn-cancel" id="cancelAboBtn">Abo kündigen</button>
+            </div>
+            <div class="abo-note" id="aboNote">Du kannst dein Abo jederzeit zum Monatsende kündigen.</div>
+        </div>
+    </section>
+    <!-- Kündigungs-Modal -->
+    <div id="cancelModal" class="modal-overlay">
+        <div class="modal-content">
+            <p>Möchtest du dein MAC-SMP Abo wirklich kündigen? Dein Zugang bleibt bis zum Monatsende erhalten.</p>
+            <div class="modal-actions">
+                <button id="confirmCancelBtn" class="btn btn-danger">Ja, kündigen</button>
+                <button id="cancelCancelBtn" class="btn btn-secondary">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-links">
+            <a href="index.html#impressum">Impressum</a>
+            <a href="agb.html" target="_blank">AGB</a>
+            <a href="datenschutz.html" target="_blank">Datenschutz</a>
+            <a href="mailto:mario@mac-netzwerk.net">Kontakt</a>
+            <a href="https://discord.gg/FusjxDz7yb" target="_blank">Discord</a>
+        </div>
+        <p>&copy; 2025 MAC-Netzwerk | Entwickelt von Mario Sinnreich | Wien, Österreich</p>
+    </footer>
+    <script src="script.js"></script>
+    <script>
+    // Holt Abo-Status und füllt die Felder
+    document.addEventListener('DOMContentLoaded', async function() {
+        const statusEl = document.getElementById('aboStatus');
+        const sinceEl = document.getElementById('aboSince');
+        const mcEl = document.getElementById('aboMc');
+        const nextPayEl = document.getElementById('aboNextPay');
+        const amountEl = document.getElementById('aboAmount');
+        const methodEl = document.getElementById('aboMethod');
+        const cancelBtn = document.getElementById('cancelAboBtn');
+        const cancelModal = document.getElementById('cancelModal');
+        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+        const cancelCancelBtn = document.getElementById('cancelCancelBtn');
+        // 1. Userdaten holen
+        let user = null;
+        try {
+            const res = await fetch('/api/auth/status', { credentials: 'include' });
+            const data = await res.json();
+            if (data.loggedIn && data.user) {
+                user = data.user;
+                mcEl.textContent = user.minecraft_username || '-';
+                sinceEl.textContent = user.registration_date ? new Date(user.registration_date).toLocaleDateString('de-AT') : '-';
+            } else {
+                window.location.href = '/login';
+                return;
+            }
+        } catch (e) {
+            window.location.href = '/login';
+            return;
+        }
+        // 2. Abo-Status aus D1 holen (Platzhalter-API, ggf. anpassen)
+        let abo = null;
+        try {
+            const res = await fetch('/api/d1/abo-status', { credentials: 'include' });
+            if (res.ok) {
+                abo = await res.json();
+                statusEl.textContent = abo.active ? 'Aktiv' : 'Inaktiv';
+                statusEl.classList.toggle('inactive', !abo.active);
+                sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : sinceEl.textContent;
+                mcEl.textContent = abo.minecraft_username || mcEl.textContent;
+                nextPayEl.textContent = abo.next_pay ? new Date(abo.next_pay).toLocaleDateString('de-AT') : '-';
+                amountEl.textContent = abo.amount ? (abo.amount.toFixed(2) + ' €') : '-';
+                methodEl.textContent = abo.method ? abo.method : '-';
+            } else {
+                statusEl.textContent = 'Nicht registriert';
+                statusEl.classList.add('inactive');
+            }
+        } catch (e) {
+            statusEl.textContent = 'Nicht registriert';
+            statusEl.classList.add('inactive');
+        }
+        // Kündigungs-Modal-Logik
+        cancelBtn.addEventListener('click', function() {
+            cancelModal.classList.add('open');
+        });
+        cancelCancelBtn.addEventListener('click', function() {
+            cancelModal.classList.remove('open');
+        });
+        cancelModal.addEventListener('click', function(e) {
+            if (e.target === cancelModal) cancelModal.classList.remove('open');
+        });
+        confirmCancelBtn.addEventListener('click', async function() {
+            confirmCancelBtn.disabled = true;
+            confirmCancelBtn.textContent = 'Kündige...';
+            try {
+                const res = await fetch('/api/d1/abo-kuendigen', { method: 'POST', credentials: 'include' });
+                if (res.ok) {
+                    statusEl.textContent = 'Gekündigt (bis Monatsende aktiv)';
+                    statusEl.classList.add('inactive');
+                    cancelModal.classList.remove('open');
+                    cancelBtn.disabled = true;
+                    cancelBtn.textContent = 'Abo gekündigt';
+                } else {
+                    alert('Kündigung fehlgeschlagen.');
+                }
+            } catch (e) {
+                alert('Kündigung fehlgeschlagen.');
+            }
+            confirmCancelBtn.disabled = false;
+            confirmCancelBtn.textContent = 'Ja, kündigen';
+        });
+    });
+    </script>
+</body>
+</html>
+

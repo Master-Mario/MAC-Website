@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil | MAC-Netzwerk</title>
+    <link rel="icon" type="image/png" href="logos/favicon-32x32.png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .profile-hero {
+            min-height: 70vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            animation: fadeInUp 1s;
+        }
+        .profile-avatar {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            border: 3px solid #ff0023;
+            margin-bottom: 1.2rem;
+            box-shadow: 0 4px 24px rgba(255,0,35,0.18);
+            animation: popIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
+        }
+        .profile-name {
+            font-size: 2.1rem;
+            font-weight: 600;
+            color: #ff0023;
+            margin-bottom: 0.7rem;
+            letter-spacing: 0.5px;
+            animation: fadeInUp 1s 0.2s both;
+        }
+        .profile-actions {
+            margin-top: 2.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            align-items: center;
+            animation: fadeInUp 1s 0.4s both;
+        }
+        .profile-link {
+            color: #fff;
+            background: linear-gradient(45deg, #ff0023, #ff4757);
+            padding: 12px 38px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 4px 16px rgba(255,0,35,0.15);
+        }
+        .profile-link:hover {
+            background: #ff0023;
+            color: #fff;
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 8px 32px rgba(255,0,35,0.25);
+        }
+        .btn-logout {
+            background: transparent;
+            color: #ff4757;
+            border: 2px solid #ff4757;
+            padding: 12px 38px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-logout:hover {
+            background: #ff4757;
+            color: #fff;
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 8px 32px rgba(255,71,87,0.25);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <nav id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">MAC-Netzwerk</a>
+            <ul class="nav-links">
+                <li><a href="index.html#home">Home</a></li>
+                <li><a href="index.html#server">Server</a></li>
+                <li><a href="https://mac-netzwerk.net/smp#regeln">Regeln</a></li>
+                <li><a href="https://mac-netzwerk.net/smp#mac-smp-registrierung">MAC-SMP Registrierung</a></li>
+                <li><a href="index.html#kontakt">Kontakt</a></li>
+                <li><a href="index.html#impressum">Impressum</a></li>
+                <li><a href="https://panel.mac-netzwerk.net/">Panel</a></li>
+            </ul>
+            <div class="auth-section">
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <img src="" alt="Avatar" class="avatar" id="userAvatar">
+                    <span class="username" id="userName"></span>
+                </div>
+            </div>
+            <div class="mobile-menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+    <section class="profile-hero">
+        <img id="profileAvatar" class="profile-avatar" src="logos/favicon-32x32.png" alt="Profilbild">
+        <div id="profileName" class="profile-name">Benutzername</div>
+        <div class="profile-actions">
+            <a href="abo.html" class="profile-link">Zu meinen Abos</a>
+            <button id="logoutBtn" class="btn-logout">Abmelden</button>
+        </div>
+    </section>
+    <footer>
+        <div class="footer-links">
+            <a href="index.html#impressum">Impressum</a>
+            <a href="mailto:mario@mac-netzwerk.net">Kontakt</a>
+            <a href="https://discord.gg/FusjxDz7yb" target="_blank">Discord</a>
+        </div>
+        <p>&copy; 2025 MAC-Netzwerk | Entwickelt von Mario Sinnreich | Wien, Österreich</p>
+    </footer>
+    <script src="script.js"></script>
+    <script>
+    // Profilinfos aus Auth-API holen und anzeigen
+    document.addEventListener('DOMContentLoaded', async function() {
+        const avatar = document.getElementById('profileAvatar');
+        const name = document.getElementById('profileName');
+        const logoutBtn = document.getElementById('logoutBtn');
+        try {
+            const res = await fetch('/api/auth/status', { credentials: 'include' });
+            const data = await res.json();
+            if (data.loggedIn && data.user) {
+                name.textContent = data.user.username;
+                if (data.user.id && data.user.avatar) {
+                    avatar.src = `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`;
+                } else {
+                    avatar.src = 'logos/favicon-32x32.png';
+                }
+            } else {
+                window.location.href = '/login';
+            }
+        } catch (e) {
+            window.location.href = '/login';
+        }
+        logoutBtn.addEventListener('click', async function() {
+            await fetch('/logout', { credentials: 'include' });
+            window.location.href = '/';
+        });
+    });
+    </script>
+</body>
+</html>
+
