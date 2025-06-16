@@ -138,7 +138,8 @@ export default {
                         payment_authorized BOOLEAN NOT NULL DEFAULT false,
                         payment_method TEXT NOT NULL DEFAULT 'unknown',
                         created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                        canceled_at TEXT DEFAULT NULL
+                        canceled_at TEXT DEFAULT NULL,
+                        used_seconds_this_month INTEGER NOT NULL DEFAULT 0
                     );
                 `).run();
             } else {
@@ -152,6 +153,9 @@ export default {
                 }
                 if (!colArray.some(col => col.name === 'canceled_at')) {
                     await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT;").run();
+                }
+                if (!colArray.some(col => col.name === 'used_seconds_this_month')) {
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN used_seconds_this_month INTEGER NOT NULL DEFAULT 0;").run();
                 }
             }
         }
@@ -399,11 +403,30 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Setze canceled_at auf jetzt
+            // Robuste Berechnung der im aktuellen Monat genutzten Sekunden
             try {
+                // Hole aktuellen Eintrag
+                const row = await env.DB.prepare('SELECT created_at, used_seconds_this_month FROM payment_setups WHERE email = ?').bind(session.user.email).first();
+                let usedSeconds = 0;
+                let createdAt = row?.created_at ? new Date(row.created_at) : null;
+                let now = new Date();
+                let lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                let monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+                // Fallback falls Wert nicht gesetzt
+                if (typeof row?.used_seconds_this_month === 'number') {
+                    usedSeconds = row.used_seconds_this_month;
+                }
+                // Wenn created_at im aktuellen Monat liegt, zähle Zeit seit created_at
+                if (createdAt && createdAt >= monthStart) {
+                    usedSeconds += Math.floor((now - createdAt) / 1000);
+                } else {
+                    // Wenn created_at vor Monatsanfang liegt, zähle nur Zeit seit Monatsanfang
+                    // (Abo war schon vorher aktiv, aber nur aktuelle Monatszeit zählt)
+                    usedSeconds = Math.floor((now - monthStart) / 1000);
+                }
                 await env.DB.prepare(
-                    'UPDATE payment_setups SET canceled_at = ? WHERE email = ?'
-                ).bind(new Date().toISOString(), session.user.email).run();
+                    'UPDATE payment_setups SET canceled_at = ?, used_seconds_this_month = ? WHERE email = ?'
+                ).bind(now.toISOString(), usedSeconds, session.user.email).run();
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
                     status: 500,
