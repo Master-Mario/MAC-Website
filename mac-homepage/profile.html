@@ -80,6 +80,99 @@
             80% { transform: scale(1.1); opacity: 1; }
             100% { transform: scale(1); }
         }
+        .profile-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #ff0023;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            width: 200px;
+            z-index: 1000;
+        }
+        .profile-dropdown li {
+            padding: 0.9rem 1.5rem;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1.05rem;
+            transition: background 0.18s, color 0.18s;
+            border: none;
+            text-align: left;
+            border-radius: 8px;
+            margin: 0 0.3rem;
+            background: #ff0023;
+        }
+        .profile-dropdown li:hover {
+            background: #000;
+            color: #fff;
+        }
+        .profile-dropdown .logout-link {
+            color: #fff;
+            font-weight: 600;
+        }
+        .profile-dropdown .logout-link:hover {
+            background: #000;
+            color: #fff;
+        }
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+        }
+        .modal-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .btn-danger {
+            background: #ff0023;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-danger:hover {
+            background: #e6001f;
+        }
+        .btn-secondary {
+            background: #ccc;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-secondary:hover {
+            background: #bbb;
+        }
     </style>
 </head>
 <body>
@@ -124,6 +217,16 @@
         </div>
         <p>&copy; 2025 MAC-Netzwerk | Entwickelt von Mario Sinnreich | Wien, Österreich</p>
     </footer>
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutConfirmationModal" class="modal-overlay">
+        <div class="modal-content">
+            <p>Bist du sicher, dass du dich abmelden möchtest?</p>
+            <div class="modal-actions">
+                <button id="confirmLogoutBtn" class="btn btn-danger">Ja, abmelden</button>
+                <button id="cancelLogoutBtn" class="btn btn-secondary">Abbrechen</button>
+            </div>
+        </div>
+    </div>
     <script src="script.js"></script>
     <script>
     // Profilinfos aus Auth-API holen und anzeigen
@@ -147,12 +250,22 @@
         } catch (e) {
             window.location.href = '/login';
         }
-        logoutBtn.addEventListener('click', async function() {
+        // Logout-Dialog anzeigen
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('logoutConfirmationModal').classList.add('open');
+        });
+        document.getElementById('confirmLogoutBtn').addEventListener('click', async function() {
             await fetch('/logout', { credentials: 'include' });
             window.location.href = '/';
+        });
+        document.getElementById('cancelLogoutBtn').addEventListener('click', function() {
+            document.getElementById('logoutConfirmationModal').classList.remove('open');
+        });
+        document.getElementById('logoutConfirmationModal').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('open');
         });
     });
     </script>
 </body>
 </html>
-
