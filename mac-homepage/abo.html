@@ -212,7 +212,7 @@
                 mcEl.textContent = abo.minecraft_username || '-';
                 nextPayEl.textContent = abo.next_pay ? new Date(abo.next_pay).toLocaleDateString('de-AT') : '-';
                 amountEl.textContent = (abo.amount && !isNaN(abo.amount)) ? (Number(abo.amount).toFixed(2) + ' €') : '-';
-                emailEl.textContent = abo.email ? abo.method : '-';
+                emailEl.textContent = abo.email ? abo.email : '-';
                 // Nur wenn aktiv, Button anzeigen
                 if (abo.active) {
                     aboCta.style.display = 'flex';
