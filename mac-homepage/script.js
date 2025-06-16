@@ -89,6 +89,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 userAvatarImg.src = defaultAvatarUrl;
             }
         }
+        // Dropdown-Menü nur einmal einfügen
+        if (userInfoDiv && !document.getElementById('profileDropdown')) {
+            const dropdown = document.createElement('div');
+            dropdown.className = 'profile-dropdown';
+            dropdown.id = 'profileDropdown';
+            dropdown.innerHTML = `
+                <ul>
+                    <li class="profile-link" id="profileMenuProfile">Profil</li>
+                    <li class="profile-link" id="profileMenuSubscription">Abonnement</li>
+                    <li class="profile-link logout-link" id="profileMenuLogout">Abmelden</li>
+                </ul>
+            `;
+            userInfoDiv.appendChild(dropdown);
+        }
     }
 
     function displayLoggedOutState() {
@@ -155,6 +169,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Dropdown-Logik
+    if (userAvatarImg) {
+        userAvatarImg.style.cursor = 'pointer';
+        userAvatarImg.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('open');
+            }
+        });
+    }
+    // Schließe Dropdown bei Klick außerhalb
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('profileDropdown');
+        if (dropdown && dropdown.classList.contains('open')) {
+            if (!dropdown.contains(e.target) && e.target !== userAvatarImg) {
+                dropdown.classList.remove('open');
+            }
+        }
+    });
+    // Menüeinträge: Profil/Abonnement/Abmelden
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'profileMenuLogout') {
+                showLogoutModal();
+            }
+            // Hier können weitere Klick-Handler für Profil/Abonnement ergänzt werden
+        });
+    });
 
     // Initial check
     checkAuthStatus();
