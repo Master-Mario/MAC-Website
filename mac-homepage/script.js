@@ -245,15 +245,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Login-Button suchen
         const loginBtn = document.getElementById('discordLoginBtn');
         if (loginBtn) {
-            loginBtn.addEventListener('click', function(e) {
-                e.preventDefault(); // Standard-Weiterleitung verhindern
-                showCookieBanner(function() {
-                    window.location.href = loginBtn.getAttribute('href') || '/login';
-                });
+            loginBtn.addEventListener('click', function() {
+                showCookieBanner();
             });
         }
         // Funktion zum Anzeigen des Cookie-Banners
-        function showCookieBanner(onAccept) {
+        function showCookieBanner() {
             let banner = document.getElementById('cookieBanner');
             if (!banner) {
                 banner = document.createElement('div');
@@ -276,15 +273,14 @@ document.addEventListener('DOMContentLoaded', function() {
             disablePage(true);
             const acceptBtn = document.getElementById('acceptCookiesBtn');
             if (acceptBtn) {
-                acceptBtn.onclick = function() {
+                acceptBtn.addEventListener('click', function() {
                     setCookie('mac_cookies_accepted', '1', 365);
                     banner.classList.add('hide');
                     banner.style.display = 'none';
                     disablePage(false);
                     const overlay = document.querySelector('.cookie-banner-overlay');
                     if (overlay) overlay.style.display = 'none';
-                    if (typeof onAccept === 'function') onAccept();
-                };
+                });
             }
         }
         // Hilfsfunktionen (aus Originalskript)
