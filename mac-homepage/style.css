@@ -682,7 +682,8 @@ footer {
     transition: opacity 0.3s;
 }
 .cookie-banner a {
-    color: #c82333;
+    color: red;
+    text-decoration: none;
 }
 .cookie-banner.hide {
     opacity: 0;
@@ -899,3 +900,4 @@ footer {
         font-size: 0.8rem;
     }
 }
+
