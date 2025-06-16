@@ -183,15 +183,15 @@
         const confirmCancelBtn = document.getElementById('confirmCancelBtn');
         const cancelCancelBtn = document.getElementById('cancelCancelBtn');
         const aboCta = document.getElementById('aboCta');
-        // 1. Userdaten holen
+        // 1. Userdaten holen (Discord-Login prüfen)
         let user = null;
         try {
             const res = await fetch('/api/auth/status', { credentials: 'include' });
             const data = await res.json();
             if (data.loggedIn && data.user) {
                 user = data.user;
-                mcEl.textContent = user.minecraft_username || '-';
-                sinceEl.textContent = user.registration_date ? new Date(user.registration_date).toLocaleDateString('de-AT') : '-';
+                // Discord-Username anzeigen (optional)
+                // mcEl.textContent = user.username || '-'; // Discord-Name nicht Minecraft-Name!
             } else {
                 window.location.href = '/login';
                 return;
@@ -200,7 +200,7 @@
             window.location.href = '/login';
             return;
         }
-        // 2. Abo-Status aus D1 holen (Platzhalter-API, ggf. anpassen)
+        // 2. Abo-Status aus D1 holen
         let abo = null;
         try {
             const res = await fetch('/api/d1/abo-status', { credentials: 'include' });
@@ -208,10 +208,10 @@
                 abo = await res.json();
                 statusEl.textContent = abo.active ? 'Aktiv' : 'Inaktiv';
                 statusEl.classList.toggle('inactive', !abo.active);
-                sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : sinceEl.textContent;
-                mcEl.textContent = abo.minecraft_username || mcEl.textContent;
+                sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : '-';
+                mcEl.textContent = abo.minecraft_username || '-';
                 nextPayEl.textContent = abo.next_pay ? new Date(abo.next_pay).toLocaleDateString('de-AT') : '-';
-                amountEl.textContent = abo.amount ? (abo.amount.toFixed(2) + ' €') : '-';
+                amountEl.textContent = (abo.amount && !isNaN(abo.amount)) ? (Number(abo.amount).toFixed(2) + ' €') : '-';
                 methodEl.textContent = abo.method ? abo.method : '-';
                 // Nur wenn aktiv, Button anzeigen
                 if (abo.active) {

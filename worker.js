@@ -313,6 +313,52 @@ export default {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+        // --- D1-API: Abo-Status anhand Discord-User (E-Mail) ausgeben ---
+        if (path === '/api/d1/abo-status' && method === 'GET') {
+            await ensurePaymentSetupsTable(env);
+            if (!session?.user?.email) {
+                return new Response(JSON.stringify({ error: 'Nicht eingeloggt oder keine E-Mail im Discord-Account' }), {
+                    status: 401,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Suche nach passendem Eintrag in D1 über die E-Mail
+            const row = await env.DB.prepare(
+                'SELECT * FROM payment_setups WHERE email = ?'
+            ).bind(session.user.email).first();
+            if (!row) {
+                return new Response(JSON.stringify({ active: false }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Hole Minecraft-Username von PlayerDB API
+            let minecraftUsername = row.minecraft_uuid;
+            try {
+                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${minecraftUsername}`);
+                if (playerdbRes.ok) {
+                    const playerdbData = await playerdbRes.json();
+                    if (playerdbData && playerdbData.data && playerdbData.data.player && playerdbData.data.player.username) {
+                        minecraftUsername = playerdbData.data.player.username;
+                    }
+                }
+            } catch (err) {
+                // Fallback: UUID anzeigen
+            }
+            // Beispielhafte Felder für die Anzeige
+            return new Response(JSON.stringify({
+                active: !!row.payment_authorized,
+                minecraft_username: minecraftUsername,
+                email: row.email,
+                stripe_id: row.stripe_id,
+                method: row.payment_method,
+                since: null, // Optional: Registrierungsdatum, falls vorhanden
+                next_pay: null, // Optional: Nächster Zahltag, falls berechnet
+                amount: null // Optional: Betrag, falls berechnet
+            }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
         // Fallback für nicht erkannte Routen mit 404 Weiterleitung
         return new Response(null, {
             status: 404,
