@@ -196,7 +196,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target && e.target.id === 'profileMenuLogout') {
                 showLogoutModal();
             }
-            // Hier können weitere Klick-Handler für Profil/Abonnement ergänzt werden
+            if (e.target && e.target.id === 'profileMenuProfile') {
+                window.location.href = '/profile';
+            }
+            if (e.target && e.target.id === 'profileMenuSubscription') {
+                window.location.href = '/abo';
+            }
         });
     });
 
