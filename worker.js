@@ -160,6 +160,20 @@ export default {
             }
         }
 
+        // Hilfsfunktion: Stellt sicher, dass die Tabelle billing_history existiert
+        async function ensureBillingHistoryTable(env) {
+            await env.DB.prepare(`
+                CREATE TABLE IF NOT EXISTS billing_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT NOT NULL,
+                    abrechnungsmonat TEXT NOT NULL,
+                    nutzungszeit INTEGER NOT NULL,
+                    kostenanteil REAL NOT NULL,
+                    timestamp TEXT NOT NULL
+                );
+            `).run();
+        }
+
         // Vorheriger Endpunkt: /create-checkout-session
         // ...existing code for /create-checkout-session wurde entfernt oder kommentiert...
 
@@ -437,10 +451,90 @@ export default {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+        // Debug-/Test-Endpunkt: Manuelle Abrechnung auslösen
+        if (path === '/api/d1/abrechnung-test' && method === 'POST') {
+            try {
+                await exports.runMonthlyBilling(env);
+                return new Response(JSON.stringify({ success: true }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (err) {
+                return new Response(JSON.stringify({ error: err.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
         // Fallback für nicht erkannte Routen mit 404 Weiterleitung
         return new Response(null, {
             status: 404,
             headers: { 'Location': env.WEBSITE_URL + '/error-pages/404.html', ...headers }
         });
+    },
+    // Führt die monatliche Abrechnung durch
+    async runMonthlyBilling(env) {
+        await ensurePaymentSetupsTable(env);
+        await ensureBillingHistoryTable(env);
+        const now = new Date();
+        const abrechnungsmonat = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const abrechnungstag = parseInt(env.BILLING_DAY || '1', 10);
+        const serverCosts = parseFloat(env.SERVER_COSTS || '0');
+        const abrechnungsdatum = new Date(now.getFullYear(), now.getMonth(), abrechnungstag, 0, 0, 0, 0);
+        // Hole alle Nutzer (auch gekündigte)
+        const rows = (await env.DB.prepare('SELECT * FROM payment_setups').all()).results || [];
+        // Berechne Nutzungszeit für alle Nutzer
+        let nutzerDaten = [];
+        let summeNutzungszeit = 0;
+        for (const row of rows) {
+            let nutzungszeit = row.used_seconds_this_month || 0;
+            let createdAt = row.created_at ? new Date(row.created_at) : null;
+            let canceledAt = row.canceled_at ? new Date(row.canceled_at) : null;
+            // Wenn Nutzer im aktuellen Monat registriert wurde und nicht gekündigt hat
+            if (createdAt && createdAt > abrechnungsdatum && !canceledAt) {
+                nutzungszeit += Math.floor((now - createdAt) / 1000);
+            }
+            // Wenn Nutzer im aktuellen Monat gekündigt hat
+            if (createdAt && canceledAt && canceledAt > abrechnungsdatum) {
+                nutzungszeit += Math.floor((canceledAt - createdAt) / 1000);
+            }
+            // Wenn Nutzer schon vor dem Abrechnungsmonat registriert war und nicht gekündigt hat
+            if (createdAt && createdAt <= abrechnungsdatum && !canceledAt) {
+                nutzungszeit += Math.floor((now - abrechnungsdatum) / 1000);
+            }
+            // Wenn Nutzer schon vor dem Abrechnungsmonat registriert war und im aktuellen Monat gekündigt hat
+            if (createdAt && canceledAt && createdAt <= abrechnungsdatum && canceledAt > abrechnungsdatum) {
+                nutzungszeit += Math.floor((canceledAt - abrechnungsdatum) / 1000);
+            }
+            // Wenn Nutzer im Vormonat gekündigt hat, keine Abrechnung mehr
+            if (canceledAt && canceledAt <= abrechnungsdatum) {
+                nutzungszeit = 0;
+            }
+            nutzerDaten.push({
+                email: row.email,
+                nutzungszeit,
+                row
+            });
+            summeNutzungszeit += nutzungszeit;
+        }
+        // Abrechnung und Speicherung
+        for (const nutzer of nutzerDaten) {
+            if (nutzer.nutzungszeit === 0) continue;
+            const kostenanteil = summeNutzungszeit > 0 ? (nutzer.nutzungszeit / summeNutzungszeit) * serverCosts : 0;
+            await env.DB.prepare(
+                'INSERT INTO billing_history (email, abrechnungsmonat, nutzungszeit, kostenanteil, timestamp) VALUES (?, ?, ?, ?, ?)'
+            ).bind(
+                nutzer.email,
+                abrechnungsmonat,
+                nutzer.nutzungszeit,
+                kostenanteil,
+                now.toISOString()
+            ).run();
+            // Sende E-Mail (Pseudo, da Worker keine SMTP hat)
+            if (env.SEND_EMAIL && typeof sendMail === 'function') {
+                await sendMail(nutzer.email, `Deine Abrechnung für ${abrechnungsmonat}`, `Du hast diesen Monat ${nutzer.nutzungszeit} Sekunden genutzt. Dein Anteil an den Serverkosten beträgt: ${kostenanteil.toFixed(2)} EUR.`);
+            }
+            // Reset used_seconds_this_month
+            await env.DB.prepare('UPDATE payment_setups SET used_seconds_this_month = 0 WHERE email = ?').bind(nutzer.email).run();
+        }
     }
 }
