@@ -146,10 +146,12 @@ export default {
                 const columns = await env.DB.prepare("PRAGMA table_info(payment_setups);").all();
                 const colArray = columns.results || columns; // Fallback falls .results nicht existiert
                 if (!colArray.some(col => col.name === 'created_at')) {
-                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT NOT NULL DEFAULT (datetime('now')); ").run();
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT;").run();
+                    // Setze für bestehende Zeilen ein aktuelles Datum
+                    await env.DB.prepare("UPDATE payment_setups SET created_at = ? WHERE created_at IS NULL;").bind(new Date().toISOString()).run();
                 }
                 if (!colArray.some(col => col.name === 'canceled_at')) {
-                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT DEFAULT NULL;").run();
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT;").run();
                 }
             }
         }
