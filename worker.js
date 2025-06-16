@@ -454,7 +454,7 @@ export default {
         // Debug-/Test-Endpunkt: Manuelle Abrechnung auslösen
         if (path === '/api/d1/abrechnung-test' && method === 'POST') {
             try {
-                await exports.runMonthlyBilling(env);
+                await this.runMonthlyBilling(env);
                 return new Response(JSON.stringify({ success: true }), {
                     headers: { 'Content-Type': 'application/json' }
                 });
