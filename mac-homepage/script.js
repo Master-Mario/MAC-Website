@@ -232,83 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- Cookie Banner Script ---
 document.addEventListener('DOMContentLoaded', function() {
-    // Cookie-Banner auf AGB und Datenschutzseite erst nach Login-Klick anzeigen
-    const isAGB = window.location.pathname.endsWith('agb.html');
-    const isDatenschutz = window.location.pathname.endsWith('datenschutz.html');
-    if (isAGB || isDatenschutz) {
-        // Login-Button suchen
-        const loginBtn = document.getElementById('discordLoginBtn');
-        if (loginBtn) {
-            loginBtn.addEventListener('click', function() {
-                showCookieBanner();
-            });
-        }
-        // Funktion zum Anzeigen des Cookie-Banners
-        function showCookieBanner() {
-            if (!document.getElementById('cookieBanner')) {
-                const banner = document.createElement('div');
-                banner.id = 'cookieBanner';
-                banner.className = 'cookie-banner';
-                banner.innerHTML = `
-                    <div class="cookie-banner-overlay"></div>
-                    <div class="cookie-banner-center">
-                        <div class="cookie-banner-content">
-                            <span class="cookie-banner-text">Diese Website verwendet Cookies für Login und Zahlungsabwicklung. Mehr dazu in der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>.</span>
-                            <button id="acceptCookiesBtn" class="cookie-banner-btn">Verstanden</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(banner);
-            }
-            const cookieBanner = document.getElementById('cookieBanner');
-            const acceptBtn = document.getElementById('acceptCookiesBtn');
-            cookieBanner.classList.remove('hide');
-            disablePage(true);
-            if (acceptBtn) {
-                acceptBtn.addEventListener('click', function() {
-                    setCookie('mac_cookies_accepted', '1', 365);
-                    cookieBanner.classList.add('hide');
-                    disablePage(false);
-                    const overlay = document.querySelector('.cookie-banner-overlay');
-                    if (overlay) overlay.style.display = 'none';
-                });
-            }
-        }
-        // Hilfsfunktionen (aus Originalskript)
-        function setCookie(name, value, days) {
-            let expires = '';
-            if (days) {
-                const date = new Date();
-                date.setTime(date.getTime() + (days*24*60*60*1000));
-                expires = "; expires=" + date.toUTCString();
-            }
-            document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
-        }
-        function disablePage(disabled) {
-            if (disabled) {
-                document.body.classList.add('cookies-blocked');
-                if (!document.getElementById('cookieBlockerOverlay')) {
-                    const overlay = document.createElement('div');
-                    overlay.id = 'cookieBlockerOverlay';
-                    overlay.style.position = 'fixed';
-                    overlay.style.inset = '0';
-                    overlay.style.width = '100vw';
-                    overlay.style.height = '100vh';
-                    overlay.style.zIndex = '2999';
-                    overlay.style.background = 'transparent';
-                    overlay.style.pointerEvents = 'all';
-                    overlay.tabIndex = 0;
-                    overlay.setAttribute('aria-hidden', 'true');
-                    document.body.appendChild(overlay);
-                }
-            } else {
-                document.body.classList.remove('cookies-blocked');
-                const overlay = document.getElementById('cookieBlockerOverlay');
-                if (overlay) overlay.remove();
-            }
-        }
-        return; // Restliches Cookie-Banner-Skript nicht ausführen
-    }
     // Cookie-Banner dynamisch einfügen, falls noch nicht vorhanden
     if (!document.getElementById('cookieBanner')) {
         const banner = document.createElement('div');
@@ -332,6 +255,41 @@ document.addEventListener('DOMContentLoaded', function() {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    function setCookie(name, value, days) {
+        let expires = '';
+        if (days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+    }
+    function disablePage(disabled) {
+        if (disabled) {
+            // Blockiere alle Interaktionen, aber ohne Blur/Filter
+            document.body.classList.add('cookies-blocked');
+            // Füge einen unsichtbaren Overlay-Div hinzu, falls nicht vorhanden
+            if (!document.getElementById('cookieBlockerOverlay')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'cookieBlockerOverlay';
+                overlay.style.position = 'fixed';
+                overlay.style.inset = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.zIndex = '2999';
+                overlay.style.background = 'transparent';
+                overlay.style.pointerEvents = 'all';
+                overlay.tabIndex = 0;
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.appendChild(overlay);
+            }
+        } else {
+            document.body.classList.remove('cookies-blocked');
+            // Entferne Overlay falls vorhanden
+            const overlay = document.getElementById('cookieBlockerOverlay');
+            if (overlay) overlay.remove();
+        }
     }
     if (getCookie('mac_cookies_accepted') === '1') {
         cookieBanner.classList.add('hide');
