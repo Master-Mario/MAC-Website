@@ -145,31 +145,42 @@
         <h2 class="section-title">Für MAC-SMP registrieren & Kosten</h2>
         <p style="text-align:center; margin-bottom:2rem; color: #cccccc;">Registriere dich hier, um auf unserem exklusiven MAC-SMP Server zu spielen und Teil der Community zu werden.</p>
 
-        <form id="registrationForm" class="registration-form">
-            <div class="form-group">
-                <label for="minecraftUsername">Minecraft-Username</label>
-                <input type="text" id="minecraftUsername" name="minecraftUsername" required>
-            </div>
+        <!-- Discord Login Prompt (wird per JS angezeigt/versteckt) -->
+        <div id="loginPromptSection" style="display:none;text-align:center;margin:2rem 0;">
+            <button id="bigDiscordLoginBtn" class="btn btn-discord-login" style="font-size:1.3rem;padding:18px 40px;display:inline-flex;align-items:center;gap:12px;">
+                <img src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d7f4ef6498ac018f2c55_Symbol.svg" alt="Discord Logo" width="32" height="32">
+                Login mit Discord
+            </button>
+        </div>
 
-            <div class="form-group">
-                <label for="email">E-Mail-Adresse</label>
-                <input type="email" id="email" name="email" required>
-            </div>
+        <!-- Registrierungsformular (wird per JS angezeigt/versteckt) -->
+        <div id="registrationSection" style="display:none;">
+            <form id="registrationForm" class="registration-form">
+                <div class="form-group">
+                    <label for="minecraftUsername">Minecraft-Username</label>
+                    <input type="text" id="minecraftUsername" name="minecraftUsername" required>
+                </div>
 
-            <div class="form-group">
-                <h3>Zahlungsinformationen & Kostenmodell</h3>
-                <p>Die Kosten für MAC-SMP (aktuell z.B. 10€/Monat Serverkosten) werden fair auf alle aktiven Spieler aufgeteilt. Bei 5 Spielern wären das 2€ pro Spieler. Wenn du im laufenden Monat beitrittst, zahlst du nur anteilig für die verbleibende Zeit (z.B. bei Einstieg zur Monatsmitte nur 1€ für den ersten Monat). Die anderen Spieler tragen in diesem Fall für diesen Monat einen entsprechend leicht höheren Anteil. Die Abbuchung erfolgt am Monatsende.</p>
-                <!-- Nachrichten-Div für Stripe-Feedback -->
-                <div id="payment-message" class="payment-message" style="margin-top: 10px;"></div>
-            </div>
+                <div class="form-group">
+                    <label for="email">E-Mail-Adresse</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
 
-            <div class="form-group agb-checkbox">
-                <input type="checkbox" id="agb" name="agb" required>
-                <label for="agb">Ich stimme den <a href="agb.html" target="_blank">AGB</a> und der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a> zu.</label>
-            </div>
+                <div class="form-group">
+                    <h3>Zahlungsinformationen & Kostenmodell</h3>
+                    <p>Die Kosten für MAC-SMP (aktuell z.B. 10€/Monat Serverkosten) werden fair auf alle aktiven Spieler aufgeteilt. Bei 5 Spielern wären das 2€ pro Spieler. Wenn du im laufenden Monat beitrittst, zahlst du nur anteilig für die verbleibende Zeit (z.B. bei Einstieg zur Monatsmitte nur 1€ für den ersten Monat). Die anderen Spieler tragen in diesem Fall für diesen Monat einen entsprechend leicht höheren Anteil. Die Abbuchung erfolgt am Monatsende.</p>
+                    <!-- Nachrichten-Div für Stripe-Feedback -->
+                    <div id="payment-message" class="payment-message" style="margin-top: 10px;"></div>
+                </div>
 
-            <button type="submit" class="btn btn-primary">Jetzt kostenpflichtig für MAC-SMP registrieren</button>
-        </form>
+                <div class="form-group agb-checkbox">
+                    <input type="checkbox" id="agb" name="agb" required>
+                    <label for="agb">Ich stimme den <a href="agb.html" target="_blank">AGB</a> und der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a> zu.</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Jetzt kostenpflichtig für MAC-SMP registrieren</button>
+            </form>
+        </div>
     </section>
 
     <!-- Logout Confirmation Modal -->
@@ -195,4 +206,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-

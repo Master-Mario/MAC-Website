@@ -311,3 +311,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 // --- Cookie Banner Script ---
+
+// --- Registrierung/Login Sichtbarkeit für SMP-Formular ---
+document.addEventListener('DOMContentLoaded', () => {
+    const registrationSection = document.getElementById('registrationSection');
+    const loginPromptSection = document.getElementById('loginPromptSection');
+    const bigDiscordLoginBtn = document.getElementById('bigDiscordLoginBtn');
+
+    async function checkSmpAuthAndShowForm() {
+        try {
+            const response = await fetch('/api/auth/status', { credentials: 'include' });
+            if (!response.ok) throw new Error('Status nicht OK');
+            const data = await response.json();
+            if (data.loggedIn && data.user) {
+                if (registrationSection) registrationSection.style.display = 'block';
+                if (loginPromptSection) loginPromptSection.style.display = 'none';
+            } else {
+                if (registrationSection) registrationSection.style.display = 'none';
+                if (loginPromptSection) loginPromptSection.style.display = 'block';
+            }
+        } catch (e) {
+            if (registrationSection) registrationSection.style.display = 'none';
+            if (loginPromptSection) loginPromptSection.style.display = 'block';
+        }
+    }
+    if (bigDiscordLoginBtn) {
+        bigDiscordLoginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/login';
+        });
+    }
+    checkSmpAuthAndShowForm();
+});
+// --- Registrierung/Login Sichtbarkeit für SMP-Formular ---
