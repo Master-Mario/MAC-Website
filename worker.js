@@ -270,15 +270,29 @@ export default {
 
             // Stripe-Session abfragen, um Customer-ID zu bekommen
             let customerId = null;
+            let session = null;
             try {
                 const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
                     headers: {
                         'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
                     }
                 });
-                const session = await stripeRes.json();
+                session = await stripeRes.json();
                 if (!stripeRes.ok) throw new Error(session.error ? session.error.message : 'Stripe API Fehler');
                 customerId = session.customer;
+                // Wenn keine Customer-ID, versuche sie aus dem SetupIntent zu holen
+                if (!customerId && session.setup_intent) {
+                    // SetupIntent abfragen
+                    const siRes = await fetch(`https://api.stripe.com/v1/setup_intents/${session.setup_intent}`, {
+                        headers: {
+                            'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
+                        }
+                    });
+                    const si = await siRes.json();
+                    if (si && si.customer) {
+                        customerId = si.customer;
+                    }
+                }
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Stripe API Fehler: ' + err.message }), {
                     status: 500,
@@ -286,7 +300,7 @@ export default {
                 });
             }
             if (!customerId) {
-                return new Response(JSON.stringify({ error: 'Keine Customer-ID in Stripe-Session gefunden.' }), {
+                return new Response(JSON.stringify({ error: 'Keine Customer-ID in Stripe-Session oder SetupIntent gefunden.' }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json' }
                 });
