@@ -180,14 +180,17 @@ export default {
         if (path === '/create-checkout-session' && method === 'POST') {
             await ensurePaymentSetupsTable(env);
             const body = await request.json();
-            const { email, minecraftUsername } = body;
+            const { minecraftUsername } = body;
+            // Discord-Session holen
+            const token = getCookie(request, 'mac_sid');
+            const session = token ? await verifyJWT(token) : null;
+            const email = session?.user?.email;
             if (!email || !minecraftUsername) {
-                return new Response(JSON.stringify({ error: 'Daten erforderlich' }), {
+                return new Response(JSON.stringify({ error: 'Daten erforderlich (Discord-Login & Minecraft-Username)' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-
             // PlayerDB API: Username -> UUID
             let minecraftUuid;
             try {
@@ -202,7 +205,6 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-
             try {
                 // Verwende den offiziellen Stripe HTTP API Aufruf
                 const stripeUrl = 'https://api.stripe.com/v1/checkout/sessions';
