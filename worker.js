@@ -627,6 +627,8 @@ export default {
                         })
                     });
                     const paymentIntentData = await paymentIntentRes.json();
+                    // Immer loggen, egal ob Erfolg oder Fehler
+                    console.log('Stripe PaymentIntent Antwort:', paymentIntentData);
                     if (!paymentIntentRes.ok) {
                         // Fehlerbehandlung, z.B. E-Mail an Admin oder Logging
                         console.error('Stripe PaymentIntent Fehler:', paymentIntentData);
