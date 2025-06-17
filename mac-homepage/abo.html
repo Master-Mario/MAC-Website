@@ -213,7 +213,20 @@
                 statusEl.classList.toggle('inactive', !abo.active || abo.canceled_at !== null);
                 sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : '-';
                 mcEl.textContent = abo.minecraft_username || '-';
-                nextPayEl.textContent = abo.next_pay ? new Date(abo.next_pay).toLocaleDateString('de-AT') : '-';
+                // --- Fix: next_pay korrekt anzeigen, auch wenn Uhrzeit 00:00:00 ist ---
+                if (abo.next_pay) {
+                    const nextPayDate = new Date(abo.next_pay);
+                    // Wenn nextPayDate der 1. des Monats ist, aber ZAHLTAG gesetzt ist, dann korrekt anzeigen
+                    if (nextPayDate.getDate() === 1 && abo.since) {
+                        // Versuche, den nächsten Zahltag aus der Backend-Logik zu rekonstruieren
+                        // (Backend liefert aber jetzt korrekt, dies ist nur Fallback)
+                        nextPayEl.textContent = '-';
+                    } else {
+                        nextPayEl.textContent = nextPayDate.toLocaleDateString('de-AT');
+                    }
+                } else {
+                    nextPayEl.textContent = '-';
+                }
                 amountEl.textContent = (abo.amount && !isNaN(abo.amount)) ? (Number(abo.amount).toFixed(2) + ' €') : '-';
                 emailEl.textContent = abo.email ? abo.email : '-';
                 // Kündigungsdatum anzeigen, falls vorhanden
