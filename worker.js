@@ -348,16 +348,20 @@ export default {
                 )
                     .bind(true, paymentMethodId || "stripe", customerId, sessionId)
                     .run();
-                // Falls kein Eintrag aktualisiert wurde, versuche nach E-Mail zu updaten (z.B. nach Datenbankbereinigung)
+                // Falls kein Eintrag aktualisiert wurde, versuche nach E-Mail zu updaten (z.B. wenn E-Mail bei Registrierung abwich)
                 if (result.changes === 0) {
                     // Hole E-Mail aus Stripe-Session
                     const email = session.customer_email || session.email;
                     if (email) {
-                        await env.DB.prepare(
-                            "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_id = ? WHERE email = ?"
-                        )
-                        .bind(true, paymentMethodId || "stripe", customerId, email)
-                        .run();
+                        // Prüfe, ob es einen Eintrag mit dieser E-Mail gibt
+                        const row = await env.DB.prepare("SELECT * FROM payment_setups WHERE email = ?").bind(email).first();
+                        if (row) {
+                            await env.DB.prepare(
+                                "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_id = ? WHERE email = ?"
+                            )
+                            .bind(true, paymentMethodId || "stripe", customerId, email)
+                            .run();
+                        }
                     }
                 }
             } catch (err) {
