@@ -459,17 +459,27 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Kündigungsdatum auf Monatsende setzen
+            // Kündigungsdatum auf nächsten Zahltag setzen
             try {
                 // Hole aktuellen Eintrag
                 const row = await env.DB.prepare('SELECT created_at FROM payment_setups WHERE email = ?').bind(session.user.email).first();
                 let createdAt = row?.created_at ? new Date(row.created_at) : null;
                 let now = new Date();
-                let monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                // Kündigung zum Monatsende
+                // Zahltag aus .env oder Monatsende
+                let zahltag;
+                if (env.ZAHLTAG) {
+                    zahltag = new Date(env.ZAHLTAG);
+                    if (zahltag <= now) {
+                        // Falls Zahltag in der Vergangenheit, auf nächsten Monat setzen
+                        zahltag = new Date(now.getFullYear(), now.getMonth() + 1, zahltag.getDate(), 23, 59, 59, 999);
+                    }
+                } else {
+                    zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                }
+                // Kündigung zum nächsten Zahltag
                 await env.DB.prepare(
                     'UPDATE payment_setups SET canceled_at = ? WHERE email = ?'
-                ).bind(monthEnd.toISOString(), session.user.email).run();
+                ).bind(zahltag.toISOString(), session.user.email).run();
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
                     status: 500,

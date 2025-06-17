@@ -217,14 +217,14 @@
                 emailEl.textContent = abo.email ? abo.email : '-';
                 // Kündigungsdatum anzeigen, falls vorhanden
                 if (abo.canceled_at) {
-                    statusEl.textContent = 'Gekündigt (läuft bis Monatsende)';
+                    statusEl.textContent = 'Gekündigt (läuft bis zum nächsten Zahltag)';
                     statusEl.classList.add('inactive');
                     aboCta.style.display = 'none';
                     sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : '-';
                     // Zeige das Kündigungsdatum im Hinweistext
                     const aboNote = document.getElementById('aboNote');
                     if (aboNote) {
-                        aboNote.textContent = 'Dein Abo wurde gekündigt und läuft noch bis zum Monatsende (' + new Date(abo.canceled_at).toLocaleDateString('de-AT') + '). Bis dahin bleibt dein Zugang und die Zahlung aktiv. Danach kannst du dich erneut registrieren.';
+                        aboNote.textContent = 'Dein Abo wurde gekündigt und läuft noch bis zum nächsten Zahltag (' + new Date(abo.canceled_at).toLocaleDateString('de-AT') + '). Bis dahin bleibt dein Zugang und die Zahlung aktiv. Danach kannst du dich erneut registrieren.';
                     }
                 } else if (abo.active) {
                     statusEl.textContent = 'Aktiv';
@@ -232,7 +232,7 @@
                     aboCta.style.display = 'flex';
                     const aboNote = document.getElementById('aboNote');
                     if (aboNote) {
-                        aboNote.textContent = 'Du kannst dein Abo jederzeit kündigen. Die Kündigung wird zum Monatsende wirksam.';
+                        aboNote.textContent = 'Du kannst dein Abo jederzeit kündigen. Die Kündigung wird zum nächsten Zahltag wirksam.';
                     }
                 } else {
                     statusEl.textContent = 'Inaktiv';
@@ -270,17 +270,21 @@
             try {
                 const res = await fetch('/api/d1/abo-kuendigen', { method: 'POST', credentials: 'include' });
                 if (res.ok) {
-                    statusEl.textContent = 'Gekündigt (läuft bis Monatsende)';
+                    statusEl.textContent = 'Gekündigt (läuft bis zum nächsten Zahltag)';
                     statusEl.classList.add('inactive');
                     cancelModal.classList.remove('open');
                     cancelBtn.disabled = true;
                     cancelBtn.textContent = 'Abo gekündigt';
                     const aboNote = document.getElementById('aboNote');
                     if (aboNote) {
-                        // Hole das aktuelle Monatsende
-                        const now = new Date();
-                        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                        aboNote.textContent = 'Dein Abo wurde gekündigt und läuft noch bis zum Monatsende (' + monthEnd.toLocaleDateString('de-AT') + '). Bis dahin bleibt dein Zugang und die Zahlung aktiv.';
+                        // Hole das aktuelle Kündigungsdatum aus dem Backend neu
+                        const aboRes = await fetch('/api/d1/abo-status', { credentials: 'include' });
+                        if (aboRes.ok) {
+                            const abo = await aboRes.json();
+                            if (abo.canceled_at) {
+                                aboNote.textContent = 'Dein Abo wurde gekündigt und läuft noch bis zum nächsten Zahltag (' + new Date(abo.canceled_at).toLocaleDateString('de-AT') + '). Bis dahin bleibt dein Zugang und die Zahlung aktiv.';
+                            }
+                        }
                     }
                 } else {
                     alert('Kündigung fehlgeschlagen.');
