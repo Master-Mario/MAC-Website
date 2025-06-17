@@ -205,6 +205,7 @@ export default {
                 formData.append('cancel_url', `${env.WEBSITE_URL}/payment-setup-cancel`);
                 formData.append('payment_method_types[]', 'card');
                 formData.append('payment_method_types[]', 'sepa_debit');
+                formData.append('customer_creation', 'always'); // Erzwinge Customer-Erstellung
 
                 const stripeRes = await fetch(stripeUrl, {
                     method: 'POST',
