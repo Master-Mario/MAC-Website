@@ -570,7 +570,7 @@ export default {
             });
             summeNutzungszeit += nutzungszeit;
         }
-        // Abrechnung und Speicherung
+        // Abrechnung und Speicherung + Stripe-Abbuchung
         for (const nutzer of nutzerDaten) {
             if (nutzer.nutzungszeit === 0) continue;
             const kostenanteil = summeNutzungszeit > 0 ? (nutzer.nutzungszeit / summeNutzungszeit) * serverCosts : 0;
@@ -583,6 +583,36 @@ export default {
                 kostenanteil,
                 now.toISOString()
             ).run();
+            // Stripe-Abbuchung nur für aktive Nutzer
+            if (nutzer.row.payment_authorized && nutzer.row.stripe_id && kostenanteil > 0) {
+                try {
+                    // Stripe PaymentIntent erstellen (Betrag in Cent, EUR)
+                    const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            amount: Math.round(kostenanteil * 100).toString(),
+                            currency: 'eur',
+                            customer: nutzer.row.stripe_id, // stripe_id als customer_id gespeichert
+                            description: `MAC-SMP Monatsbeitrag ${abrechnungsmonat}`,
+                            confirm: 'true',
+                            off_session: 'true',
+                            payment_method_types: 'card,sepa_debit'
+                        })
+                    });
+                    const paymentIntentData = await paymentIntentRes.json();
+                    if (!paymentIntentRes.ok) {
+                        // Fehlerbehandlung, z.B. E-Mail an Admin oder Logging
+                        console.error('Stripe PaymentIntent Fehler:', paymentIntentData);
+                    }
+                } catch (err) {
+                    // Stripe-Fehler loggen
+                    console.error('Stripe PaymentIntent Exception:', err);
+                }
+            }
             // Sende E-Mail (Pseudo, da Worker keine SMTP hat)
             if (env.SEND_EMAIL && typeof sendMail === 'function') {
                 await sendMail(nutzer.email, `Deine Abrechnung für ${abrechnungsmonat}`, `Du hast diesen Monat ${nutzer.nutzungszeit} Sekunden genutzt. Dein Anteil an den Serverkosten beträgt: ${kostenanteil.toFixed(2)} EUR.`);
