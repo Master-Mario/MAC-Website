@@ -373,13 +373,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const aboRes = await fetch('/api/d1/abo-status', { credentials: 'include' });
                 if (aboRes.ok) {
                     const abo = await aboRes.json();
-                    // Formular nur ausblenden, wenn aktiv (nicht gekündigt)
-                    if (abo && abo.active && !abo.canceled_at) {
+                    // Formular ausblenden, wenn aktiv ODER gekündigt aber Kündigungsdatum in der Zukunft
+                    if (abo && ((abo.active && !abo.canceled_at) || (abo.canceled_at && new Date(abo.canceled_at) > new Date()))) {
                         if (smpSection) smpSection.style.display = 'none';
                         return;
                     }
                 }
-                // User ist eingeloggt, aber nicht aktiv registriert oder gekündigt: Formular anzeigen
+                // User ist eingeloggt, aber nicht aktiv registriert oder Kündigung ist abgelaufen: Formular anzeigen
                 if (registrationSection) registrationSection.style.display = 'block';
                 if (loginPromptSection) loginPromptSection.style.display = 'none';
                 if (smpSection) smpSection.style.display = '';
