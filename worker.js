@@ -370,6 +370,12 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
+            // Hole Abrechnungsstichtag und Serverkosten aus ENV
+            const abrechnungstag = parseInt(env.BILLING_DAY || '1', 10);
+            const serverCosts = parseFloat(env.SERVER_COSTS || '0');
+            const now = new Date();
+            const abrechnungsmonat = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const abrechnungsdatum = new Date(now.getFullYear(), now.getMonth(), abrechnungstag, 0, 0, 0, 0);
             // Suche nach passendem Eintrag in D1 über die E-Mail
             const row = await env.DB.prepare(
                 'SELECT * FROM payment_setups WHERE email = ?'
@@ -393,6 +399,62 @@ export default {
             } catch (err) {
                 // Fallback: UUID anzeigen
             }
+            // Nächster Zahltag berechnen
+            let nextPay = null;
+            if (!row.canceled_at) {
+                // Wenn noch nicht gekündigt, nächster Zahltag ist der nächste Abrechnungstag
+                let next = new Date(abrechnungsdatum);
+                if (now >= abrechnungsdatum) {
+                    next.setMonth(next.getMonth() + 1);
+                }
+                nextPay = next.toISOString();
+            }
+            // Anteil berechnen wie in runMonthlyBilling
+            let amount = null;
+            try {
+                // Hole alle Nutzer (auch gekündigte)
+                const rows = (await env.DB.prepare('SELECT * FROM payment_setups').all()).results || [];
+                let nutzerDaten = [];
+                let summeNutzungszeit = 0;
+                for (const r of rows) {
+                    let nutzungszeit = r.used_seconds_this_month || 0;
+                    let createdAt = r.created_at ? new Date(r.created_at) : null;
+                    let canceledAt = r.canceled_at ? new Date(r.canceled_at) : null;
+                    // Wenn Nutzer im aktuellen Monat registriert wurde und nicht gekündigt hat
+                    if (createdAt && createdAt > abrechnungsdatum && !canceledAt) {
+                        nutzungszeit += Math.floor((now - createdAt) / 1000);
+                    }
+                    // Wenn Nutzer im aktuellen Monat gekündigt hat
+                    if (createdAt && canceledAt && canceledAt > abrechnungsdatum) {
+                        nutzungszeit += Math.floor((canceledAt - createdAt) / 1000);
+                    }
+                    // Wenn Nutzer schon vor dem Abrechnungsmonat registriert war und nicht gekündigt hat
+                    if (createdAt && createdAt <= abrechnungsdatum && !canceledAt) {
+                        nutzungszeit += Math.floor((now - abrechnungsdatum) / 1000);
+                    }
+                    // Wenn Nutzer schon vor dem Abrechnungsmonat registriert war und im aktuellen Monat gekündigt hat
+                    if (createdAt && canceledAt && createdAt <= abrechnungsdatum && canceledAt > abrechnungsdatum) {
+                        nutzungszeit += Math.floor((canceledAt - abrechnungsdatum) / 1000);
+                    }
+                    // Wenn Nutzer im Vormonat gekündigt hat, keine Abrechnung mehr
+                    if (canceledAt && canceledAt <= abrechnungsdatum) {
+                        nutzungszeit = 0;
+                    }
+                    nutzerDaten.push({
+                        email: r.email,
+                        nutzungszeit,
+                        r
+                    });
+                    summeNutzungszeit += nutzungszeit;
+                }
+                // Anteil für aktuellen Nutzer
+                const meinNutzer = nutzerDaten.find(n => n.email === row.email);
+                if (meinNutzer && meinNutzer.nutzungszeit > 0 && summeNutzungszeit > 0) {
+                    amount = (meinNutzer.nutzungszeit / summeNutzungszeit) * serverCosts;
+                }
+            } catch (err) {
+                amount = null;
+            }
             // Beispielhafte Felder für die Anzeige
             return new Response(JSON.stringify({
                 active: !!row.payment_authorized,
@@ -402,8 +464,8 @@ export default {
                 method: row.payment_method,
                 since: row.created_at || null, // Registrierungsdatum
                 canceled_at: row.canceled_at || null, // Kündigungsdatum
-                next_pay: null, // Optional: Nächster Zahltag, falls berechnet
-                amount: null // Optional: Betrag, falls berechnet
+                next_pay: nextPay, // Nächster Zahltag
+                amount: amount // Anteil
             }), {
                 headers: { 'Content-Type': 'application/json' }
             });
