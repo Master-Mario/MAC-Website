@@ -278,6 +278,7 @@ export default {
                     }
                 });
                 session = await stripeRes.json();
+                console.log('Stripe-Session:', session); // Logging hinzugefügt
                 if (!stripeRes.ok) throw new Error(session.error ? session.error.message : 'Stripe API Fehler');
                 customerId = session.customer;
                 // Wenn keine Customer-ID, versuche sie aus dem SetupIntent zu holen
@@ -289,6 +290,7 @@ export default {
                         }
                     });
                     const si = await siRes.json();
+                    console.log('Stripe-SetupIntent:', si); // Logging hinzugefügt
                     if (si && si.customer) {
                         customerId = si.customer;
                     }
