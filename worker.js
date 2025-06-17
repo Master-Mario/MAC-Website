@@ -397,22 +397,40 @@ export default {
             let amount = null;
             let next_pay = null;
             if (row.created_at) {
-                const serverKosten = parseFloat(env.SERVER_COSTS || '10');
-                const seit = new Date(row.created_at);
+                const serverKosten = parseFloat(env.SERVER_COSTS || '14');
                 const jetzt = new Date();
-                // Zahltag = Monatsende
-                const zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
-                next_pay = zahltag.toISOString();
-                // Anteil berechnen: (Tage seit Registrierung bis Zahltag) / (Tage im Monat)
-                const tageImMonat = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0).getDate();
-                let tageGesamt = (zahltag - seit) / (1000 * 60 * 60 * 24);
-                if (tageGesamt > tageImMonat) tageGesamt = tageImMonat; // Maximal voller Monat
-                if (tageGesamt < 1) tageGesamt = 1; // Mindestens 1 Tag
-                // Wenn im aktuellen Monat registriert, anteilig, sonst voller Monat
-                if (seit.getMonth() === jetzt.getMonth() && seit.getFullYear() === jetzt.getFullYear()) {
-                    amount = serverKosten * (tageGesamt / tageImMonat);
+                // Zahltag aus .env oder Monatsende
+                let zahltag;
+                if (env.ZAHLTAG) {
+                    zahltag = new Date(env.ZAHLTAG);
                 } else {
-                    amount = serverKosten;
+                    zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
+                }
+                next_pay = zahltag.toISOString();
+                // Alle Nutzer holen
+                const nutzerRows = (await env.DB.prepare('SELECT created_at, canceled_at FROM payment_setups WHERE payment_authorized = 1').all()).results || [];
+                // Nutzertage berechnen
+                let summeNutzertage = 0;
+                let meineNutzertage = 0;
+                for (const nutzer of nutzerRows) {
+                    const reg = new Date(nutzer.created_at);
+                    const end = nutzer.canceled_at ? new Date(nutzer.canceled_at) : zahltag;
+                    // Startdatum: max(registriert, Monatsanfang)
+                    const monatStart = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1);
+                    const start = reg > monatStart ? reg : monatStart;
+                    // Enddatum: min(zahltag, gekündigt)
+                    const stop = end < zahltag ? end : zahltag;
+                    let tage = Math.ceil((stop - start) / (1000 * 60 * 60 * 24));
+                    if (tage < 0) tage = 0;
+                    summeNutzertage += tage;
+                    if (nutzer.created_at === row.created_at && nutzer.canceled_at === row.canceled_at) {
+                        meineNutzertage = tage;
+                    }
+                }
+                if (summeNutzertage > 0) {
+                    amount = serverKosten * (meineNutzertage / summeNutzertage);
+                } else {
+                    amount = 0;
                 }
             }
             // Beispielhafte Felder für die Anzeige
@@ -442,27 +460,14 @@ export default {
             // Kündigungsdatum auf Monatsende setzen
             try {
                 // Hole aktuellen Eintrag
-                const row = await env.DB.prepare('SELECT created_at, used_seconds_this_month FROM payment_setups WHERE email = ?').bind(session.user.email).first();
-                let usedSeconds = 0;
+                const row = await env.DB.prepare('SELECT created_at FROM payment_setups WHERE email = ?').bind(session.user.email).first();
                 let createdAt = row?.created_at ? new Date(row.created_at) : null;
                 let now = new Date();
                 let monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                let monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-                // Fallback falls Wert nicht gesetzt
-                if (typeof row?.used_seconds_this_month === 'number') {
-                    usedSeconds = row.used_seconds_this_month;
-                }
-                // Wenn created_at im aktuellen Monat liegt, zähle Zeit seit created_at
-                if (createdAt && createdAt >= monthStart) {
-                    usedSeconds += Math.floor((now - createdAt) / 1000);
-                } else {
-                    // Wenn created_at vor Monatsanfang liegt, zähle nur Zeit seit Monatsanfang
-                    usedSeconds = Math.floor((now - monthStart) / 1000);
-                }
                 // Kündigung zum Monatsende
                 await env.DB.prepare(
-                    'UPDATE payment_setups SET canceled_at = ?, used_seconds_this_month = ? WHERE email = ?'
-                ).bind(monthEnd.toISOString(), usedSeconds, session.user.email).run();
+                    'UPDATE payment_setups SET canceled_at = ? WHERE email = ?'
+                ).bind(monthEnd.toISOString(), session.user.email).run();
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
                     status: 500,
@@ -499,63 +504,53 @@ export default {
         await ensureBillingHistoryTable(env);
         const now = new Date();
         const abrechnungsmonat = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        const abrechnungstag = parseInt(env.BILLING_DAY || '1', 10);
-        const serverCosts = parseFloat(env.SERVER_COSTS || '0');
-        const abrechnungsdatum = new Date(now.getFullYear(), now.getMonth(), abrechnungstag, 0, 0, 0, 0);
-        // Hole alle Nutzer (auch gekündigte)
+        // Zahltag aus .env oder Monatsende
+        let zahltag;
+        if (env.ZAHLTAG) {
+            zahltag = new Date(env.ZAHLTAG);
+        } else {
+            zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        }
+        const serverKosten = parseFloat(env.SERVER_COSTS || '0');
+        // Alle Nutzer (auch gekündigte) holen
         const rows = (await env.DB.prepare('SELECT * FROM payment_setups').all()).results || [];
-        // Berechne Nutzungszeit für alle Nutzer
+        // Nutzertage berechnen
         let nutzerDaten = [];
-        let summeNutzungszeit = 0;
+        let summeNutzertage = 0;
         for (const row of rows) {
-            let nutzungszeit = row.used_seconds_this_month || 0;
-            let createdAt = row.created_at ? new Date(row.created_at) : null;
-            let canceledAt = row.canceled_at ? new Date(row.canceled_at) : null;
-            // Wenn Nutzer im aktuellen Monat registriert wurde und nicht gekündigt hat
-            if (createdAt && createdAt > abrechnungsdatum && !canceledAt) {
-                nutzungszeit += Math.floor((now - createdAt) / 1000);
-            }
-            // Wenn Nutzer im aktuellen Monat gekündigt hat
-            if (createdAt && canceledAt && canceledAt > abrechnungsdatum) {
-                nutzungszeit += Math.floor((canceledAt - createdAt) / 1000);
-            }
-            // Wenn Nutzer schon vor dem Abrechnungsmonat registriert war und nicht gekündigt hat
-            if (createdAt && createdAt <= abrechnungsdatum && !canceledAt) {
-                nutzungszeit += Math.floor((now - abrechnungsdatum) / 1000);
-            }
-            // Wenn Nutzer schon vor dem Abrechnungsmonat registriert war und im aktuellen Monat gekündigt hat
-            if (createdAt && canceledAt && createdAt <= abrechnungsdatum && canceledAt > abrechnungsdatum) {
-                nutzungszeit += Math.floor((canceledAt - abrechnungsdatum) / 1000);
-            }
-            // Wenn Nutzer im Vormonat gekündigt hat, keine Abrechnung mehr
-            if (canceledAt && canceledAt <= abrechnungsdatum) {
-                nutzungszeit = 0;
-            }
+            const reg = row.created_at ? new Date(row.created_at) : null;
+            const end = row.canceled_at ? new Date(row.canceled_at) : zahltag;
+            const monatStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const start = reg && reg > monatStart ? reg : monatStart;
+            const stop = end < zahltag ? end : zahltag;
+            let tage = reg ? Math.ceil((stop - start) / (1000 * 60 * 60 * 24)) : 0;
+            if (tage < 0) tage = 0;
+            summeNutzertage += tage;
             nutzerDaten.push({
                 email: row.email,
-                nutzungszeit,
+                nutzertage: tage,
                 row
             });
-            summeNutzungszeit += nutzungszeit;
         }
         // Abrechnung und Speicherung
         for (const nutzer of nutzerDaten) {
-            if (nutzer.nutzungszeit === 0) continue;
-            const kostenanteil = summeNutzungszeit > 0 ? (nutzer.nutzungszeit / summeNutzungszeit) * serverCosts : 0;
+            if (nutzer.nutzertage === 0) continue;
+            const kostenanteil = summeNutzertage > 0 ? (nutzer.nutzertage / summeNutzertage) * serverKosten : 0;
             await env.DB.prepare(
                 'INSERT INTO billing_history (email, abrechnungsmonat, nutzungszeit, kostenanteil, timestamp) VALUES (?, ?, ?, ?, ?)'
             ).bind(
                 nutzer.email,
                 abrechnungsmonat,
-                nutzer.nutzungszeit,
+                nutzer.nutzertage,
                 kostenanteil,
                 now.toISOString()
             ).run();
             // Sende E-Mail (Pseudo, da Worker keine SMTP hat)
             if (env.SEND_EMAIL && typeof sendMail === 'function') {
-                await sendMail(nutzer.email, `Deine Abrechnung für ${abrechnungsmonat}`, `Du hast diesen Monat ${nutzer.nutzungszeit} Sekunden genutzt. Dein Anteil an den Serverkosten beträgt: ${kostenanteil.toFixed(2)} EUR.`);
+                await sendMail(nutzer.email, `Deine Abrechnung für ${abrechnungsmonat}`,
+                    `Du warst diesen Monat ${nutzer.nutzertage} Tage registriert. Dein Anteil an den Serverkosten beträgt: ${kostenanteil.toFixed(2)} EUR.`);
             }
-            // Reset used_seconds_this_month
+            // Reset used_seconds_this_month (optional, falls nicht mehr benötigt)
             await env.DB.prepare('UPDATE payment_setups SET used_seconds_this_month = 0 WHERE email = ?').bind(nutzer.email).run();
         }
     }
