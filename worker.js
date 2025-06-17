@@ -293,11 +293,24 @@ export default {
             }
             // Update payment_authorized, payment_method und stripe_id (jetzt Customer-ID!) in der Datenbank
             try {
-                await env.DB.prepare(
+                // Versuche zuerst nach Session-ID zu updaten
+                let result = await env.DB.prepare(
                     "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_id = ? WHERE stripe_id = ?"
                 )
                     .bind(true, "stripe", customerId, sessionId)
                     .run();
+                // Falls kein Eintrag aktualisiert wurde, versuche nach E-Mail zu updaten (z.B. nach Datenbankbereinigung)
+                if (result.changes === 0) {
+                    // Hole E-Mail aus Stripe-Session
+                    const email = session.customer_email || session.email;
+                    if (email) {
+                        await env.DB.prepare(
+                            "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_id = ? WHERE email = ?"
+                        )
+                        .bind(true, "stripe", customerId, email)
+                        .run();
+                    }
+                }
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
                     status: 500,
