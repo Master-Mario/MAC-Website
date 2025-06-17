@@ -576,6 +576,38 @@ export default {
         for (const nutzer of nutzerDaten) {
             if (nutzer.nutzungsminuten === 0) continue;
             const kostenanteil = summeNutzerminuten > 0 ? (nutzer.nutzungsminuten / summeNutzerminuten) * serverKosten : 0;
+            // Stripe-Abbuchung, falls aktiviert und autorisiert
+            try {
+                if (nutzer.row.payment_authorized && nutzer.row.stripe_id && nutzer.row.payment_method && kostenanteil > 0) {
+                    const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
+                        },
+                        body: new URLSearchParams({
+                            amount: Math.round(kostenanteil * 100).toString(), // Betrag in Cent
+                            currency: 'eur',
+                            customer: nutzer.row.stripe_id,
+                            payment_method: nutzer.row.payment_method,
+                            off_session: 'true',
+                            confirm: 'true',
+                            description: `Monatliche Serverkosten für ${abrechnungsmonat}`
+                        }).toString()
+                    });
+                    const paymentIntent = await paymentIntentRes.json();
+                    if (!paymentIntentRes.ok) {
+                        // Fehler loggen, aber nicht abbrechen
+                        if (env.LOG_ERRORS) {
+                            console.error('Stripe PaymentIntent Fehler:', paymentIntent.error ? paymentIntent.error.message : paymentIntent);
+                        }
+                    }
+                }
+            } catch (err) {
+                if (env.LOG_ERRORS) {
+                    console.error('Stripe PaymentIntent Exception:', err);
+                }
+            }
             await env.DB.prepare(
                 'INSERT INTO billing_history (email, abrechnungsmonat, nutzungszeit, kostenanteil, timestamp) VALUES (?, ?, ?, ?, ?)'
             ).bind(
