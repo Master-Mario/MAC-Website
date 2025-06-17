@@ -137,7 +137,7 @@ export default {
                         stripe_id TEXT NOT NULL,
                         payment_authorized BOOLEAN NOT NULL DEFAULT false,
                         payment_method TEXT NOT NULL DEFAULT 'unknown',
-                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
                         canceled_at TEXT DEFAULT NULL,
                         used_seconds_this_month INTEGER NOT NULL DEFAULT 0
                     );
@@ -528,39 +528,40 @@ export default {
         const rows = (await env.DB.prepare('SELECT * FROM payment_setups').all()).results || [];
         // Nutzertage berechnen
         let nutzerDaten = [];
-        let summeNutzertage = 0;
+        let summeNutzerminuten = 0;
         for (const row of rows) {
             const reg = row.created_at ? new Date(row.created_at) : null;
             const end = row.canceled_at ? new Date(row.canceled_at) : zahltag;
-            const monatStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monatStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+            // Startzeitpunkt für die Berechnung: max(registriert, Monatsanfang)
             const start = reg && reg > monatStart ? reg : monatStart;
+            // Endzeitpunkt: min(zahltag, gekündigt)
             const stop = end < zahltag ? end : zahltag;
-            let tage = reg ? Math.ceil((stop - start) / (1000 * 60 * 60 * 24)) : 0;
-            if (tage < 0) tage = 0;
-            summeNutzertage += tage;
+            let minuten = reg ? Math.max(0, Math.floor((stop - start) / 1000 / 60)) : 0;
+            summeNutzerminuten += minuten;
             nutzerDaten.push({
                 email: row.email,
-                nutzertage: tage,
+                nutzungsminuten: minuten,
                 row
             });
         }
         // Abrechnung und Speicherung
         for (const nutzer of nutzerDaten) {
-            if (nutzer.nutzertage === 0) continue;
-            const kostenanteil = summeNutzertage > 0 ? (nutzer.nutzertage / summeNutzertage) * serverKosten : 0;
+            if (nutzer.nutzungsminuten === 0) continue;
+            const kostenanteil = summeNutzerminuten > 0 ? (nutzer.nutzungsminuten / summeNutzerminuten) * serverKosten : 0;
             await env.DB.prepare(
                 'INSERT INTO billing_history (email, abrechnungsmonat, nutzungszeit, kostenanteil, timestamp) VALUES (?, ?, ?, ?, ?)'
             ).bind(
                 nutzer.email,
                 abrechnungsmonat,
-                nutzer.nutzertage,
+                nutzer.nutzungsminuten,
                 kostenanteil,
                 now.toISOString()
             ).run();
             // Sende E-Mail (Pseudo, da Worker keine SMTP hat)
             if (env.SEND_EMAIL && typeof sendMail === 'function') {
                 await sendMail(nutzer.email, `Deine Abrechnung für ${abrechnungsmonat}`,
-                    `Du warst diesen Monat ${nutzer.nutzertage} Tage registriert. Dein Anteil an den Serverkosten beträgt: ${kostenanteil.toFixed(2)} EUR.`);
+                    `Du warst diesen Monat ${nutzer.nutzungsminuten} Minuten registriert. Dein Anteil an den Serverkosten beträgt: ${kostenanteil.toFixed(2)} EUR.`);
             }
             // Reset used_seconds_this_month (optional, falls nicht mehr benötigt)
             await env.DB.prepare('UPDATE payment_setups SET used_seconds_this_month = 0 WHERE email = ?').bind(nutzer.email).run();
