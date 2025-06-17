@@ -405,7 +405,21 @@ export default {
                 // Zahltag aus .env oder Monatsende
                 let zahltag;
                 if (env.ZAHLTAG) {
-                    zahltag = new Date(env.ZAHLTAG);
+                    // env.ZAHLTAG als Tag des Monats interpretieren (z.B. "28")
+                    const zahltagNum = parseInt(env.ZAHLTAG, 10);
+                    if (!isNaN(zahltagNum) && zahltagNum > 0 && zahltagNum <= 31) {
+                        // Prüfe, ob der Zahltag in diesem Monat noch kommt
+                        let thisMonthZahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), zahltagNum, 23, 59, 59, 999);
+                        if (jetzt <= thisMonthZahltag) {
+                            zahltag = thisMonthZahltag;
+                        } else {
+                            // Nächster Monat
+                            zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, zahltagNum, 23, 59, 59, 999);
+                        }
+                    } else {
+                        // Fallback: Monatsende
+                        zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
+                    }
                 } else {
                     zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
                 }
@@ -468,10 +482,20 @@ export default {
                 // Zahltag aus .env oder Monatsende
                 let zahltag;
                 if (env.ZAHLTAG) {
-                    zahltag = new Date(env.ZAHLTAG);
-                    if (zahltag <= now) {
-                        // Falls Zahltag in der Vergangenheit, auf nächsten Monat setzen
-                        zahltag = new Date(now.getFullYear(), now.getMonth() + 1, zahltag.getDate(), 23, 59, 59, 999);
+                    // env.ZAHLTAG als Tag des Monats interpretieren (z.B. "28")
+                    const zahltagNum = parseInt(env.ZAHLTAG, 10);
+                    if (!isNaN(zahltagNum) && zahltagNum > 0 && zahltagNum <= 31) {
+                        // Prüfe, ob der Zahltag in diesem Monat noch kommt
+                        let thisMonthZahltag = new Date(now.getFullYear(), now.getMonth(), zahltagNum, 23, 59, 59, 999);
+                        if (now <= thisMonthZahltag) {
+                            zahltag = thisMonthZahltag;
+                        } else {
+                            // Nächster Monat
+                            zahltag = new Date(now.getFullYear(), now.getMonth() + 1, zahltagNum, 23, 59, 59, 999);
+                        }
+                    } else {
+                        // Fallback: Monatsende
+                        zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
                     }
                 } else {
                     zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
