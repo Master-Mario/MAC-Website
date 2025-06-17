@@ -215,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
             paymentMessage.textContent = ''; // Clear previous messages
 
             const minecraftUsername = document.getElementById('minecraftUsername').value;
-            const email = document.getElementById('email').value;
             const agbChecked = document.getElementById('agb').checked;
 
             if (!agbChecked) {
@@ -235,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ minecraftUsername, email }),
+                    body: JSON.stringify({ minecraftUsername }),
                 });
 
                 if (!response.ok) {
