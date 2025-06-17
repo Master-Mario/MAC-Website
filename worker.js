@@ -172,14 +172,22 @@ export default {
         if (path === '/create-checkout-session' && method === 'POST') {
             await ensurePaymentSetupsTable(env);
             const body = await request.json();
-            const { email, minecraftUsername } = body;
-            if (!email || !minecraftUsername) {
-                return new Response(JSON.stringify({ error: 'Daten erforderlich' }), {
+            const { minecraftUsername, email } = body;
+            // Discord-Session prüfen
+            if (!session?.user?.email) {
+                return new Response(JSON.stringify({ error: 'Nicht eingeloggt oder keine E-Mail im Discord-Account' }), {
+                    status: 401,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // E-Mail: entweder vom User oder Discord
+            const usedEmail = (email && email.trim()) ? email.trim() : session.user.email;
+            if (!minecraftUsername) {
+                return new Response(JSON.stringify({ error: 'Minecraft Username erforderlich' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-
             // PlayerDB API: Username -> UUID
             let minecraftUuid;
             try {
@@ -195,12 +203,13 @@ export default {
                 });
             }
 
+            // Stripe Checkout-Session erstellen
             try {
                 // Verwende den offiziellen Stripe HTTP API Aufruf
                 const stripeUrl = 'https://api.stripe.com/v1/checkout/sessions';
                 const formData = new URLSearchParams();
                 formData.append('mode', 'setup');
-                formData.append('customer_email', email);
+                formData.append('customer_email', usedEmail);
                 formData.append('success_url', `${env.WEBSITE_URL}/payment-setup-success?session_id={CHECKOUT_SESSION_ID}`);
                 formData.append('cancel_url', `${env.WEBSITE_URL}/payment-setup-cancel`);
                 formData.append('payment_method_types[]', 'card');
@@ -218,15 +227,15 @@ export default {
                 const session = await stripeRes.json();
                 if (!stripeRes.ok) throw new Error(session.error ? session.error.message : 'Stripe API Fehler');
 
-                // D1 Database Integration: Speichere Minecraft UUID, Email, Stripe Session ID, Zahlungserlaubnis und Methode
+                // D1 Database Integration: Speichere Minecraft UUID, verwendete E-Mail, Stripe Session ID, Zahlungserlaubnis und Methode
                 try {
                     // Prüfe, ob es einen bestehenden Eintrag mit dieser UUID oder E-Mail gibt
-                    const existing = await env.DB.prepare("SELECT * FROM payment_setups WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, email).first();
+                    const existing = await env.DB.prepare("SELECT * FROM payment_setups WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, usedEmail).first();
                     if (existing) {
                         // Wenn gekündigt, reaktiviere bestehenden Eintrag (statt INSERT)
                         if (existing.canceled_at) {
-                            await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 0, stripe_id = ?, payment_method = ?, created_at = ?, canceled_at = NULL WHERE minecraft_uuid = ? OR email = ?")
-                                .bind(session.id, "unknown", new Date().toISOString(), minecraftUuid, email)
+                            await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 0, stripe_id = ?, payment_method = ?, created_at = ?, canceled_at = NULL, email = ? WHERE minecraft_uuid = ? OR email = ?")
+                                .bind(session.id, "unknown", new Date().toISOString(), usedEmail, minecraftUuid, usedEmail)
                                 .run();
                         } else {
                             return new Response(JSON.stringify({ error: 'Du bist bereits registriert. Bitte verwende deinen bestehenden Account.' }), {
@@ -239,7 +248,7 @@ export default {
                         await env.DB.prepare(
                             "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, payment_method, created_at, canceled_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
                         )
-                            .bind(minecraftUuid, email, session.id, false, "unknown", new Date().toISOString(), null)
+                            .bind(minecraftUuid, usedEmail, session.id, false, "unknown", new Date().toISOString(), null)
                             .run();
                     }
                     return new Response(JSON.stringify({ url: session.url }), {
