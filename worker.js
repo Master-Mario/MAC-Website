@@ -268,12 +268,35 @@ export default {
                 });
             }
 
-            // Update payment_authorized und payment_method in der Datenbank
+            // Stripe-Session abfragen, um Customer-ID zu bekommen
+            let customerId = null;
+            try {
+                const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
+                    }
+                });
+                const session = await stripeRes.json();
+                if (!stripeRes.ok) throw new Error(session.error ? session.error.message : 'Stripe API Fehler');
+                customerId = session.customer;
+            } catch (err) {
+                return new Response(JSON.stringify({ error: 'Stripe API Fehler: ' + err.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            if (!customerId) {
+                return new Response(JSON.stringify({ error: 'Keine Customer-ID in Stripe-Session gefunden.' }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Update payment_authorized, payment_method und stripe_id (jetzt Customer-ID!) in der Datenbank
             try {
                 await env.DB.prepare(
-                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ? WHERE stripe_id = ?"
+                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_id = ? WHERE stripe_id = ?"
                 )
-                    .bind(true, "stripe", sessionId)
+                    .bind(true, "stripe", customerId, sessionId)
                     .run();
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
