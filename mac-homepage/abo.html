@@ -213,17 +213,18 @@
                 statusEl.classList.toggle('inactive', !abo.active || abo.canceled_at !== null);
                 sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : '-';
                 mcEl.textContent = abo.minecraft_username || '-';
-                // --- Fix: next_pay korrekt anzeigen, auch wenn Uhrzeit 00:00:00 ist ---
+                // --- next_pay und billing_day_env anzeigen ---
                 if (abo.next_pay) {
+                    // next_pay ist ein ISO-Datum wie "2025-06-30T23:59:59.999Z"
                     const nextPayDate = new Date(abo.next_pay);
-                    // Wenn nextPayDate der 1. des Monats ist, aber ZAHLTAG gesetzt ist, dann korrekt anzeigen
-                    if (nextPayDate.getDate() === 1 && abo.since) {
-                        // Versuche, den nächsten Zahltag aus der Backend-Logik zu rekonstruieren
-                        // (Backend liefert aber jetzt korrekt, dies ist nur Fallback)
-                        nextPayEl.textContent = '-';
-                    } else {
+                    if (!isNaN(nextPayDate.getTime())) {
                         nextPayEl.textContent = nextPayDate.toLocaleDateString('de-AT');
+                    } else {
+                        nextPayEl.textContent = '-';
                     }
+                } else if (abo.billing_day_env) {
+                    // Fallback: Zeige den Billing-Tag aus der .env
+                    nextPayEl.textContent = 'jeden ' + abo.billing_day_env + '. im Monat';
                 } else {
                     nextPayEl.textContent = '-';
                 }

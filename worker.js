@@ -376,8 +376,10 @@ export default {
             const row = await env.DB.prepare(
                 'SELECT * FROM payment_setups WHERE email = ?'
             ).bind(session.user.email).first();
+            // --- Änderung: BILLING_DAY statt ZAHLTAG ---
+            let billing_day_env = env.BILLING_DAY ? env.BILLING_DAY : null;
             if (!row) {
-                return new Response(JSON.stringify({ active: false }), {
+                return new Response(JSON.stringify({ active: false, billing_day_env }), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -402,28 +404,27 @@ export default {
             if (row.created_at) {
                 const serverKosten = parseFloat(env.SERVER_COSTS || '14');
                 const jetzt = new Date();
-                // Zahltag aus .env oder Monatsende
+                // --- Änderung: BILLING_DAY statt ZAHLTAG ---
+                let billing_day = env.BILLING_DAY;
                 let zahltag;
-                if (env.ZAHLTAG) {
-                    // env.ZAHLTAG als Tag des Monats interpretieren (z.B. "28")
-                    const zahltagNum = parseInt(env.ZAHLTAG, 10);
-                    if (!isNaN(zahltagNum) && zahltagNum > 0 && zahltagNum <= 31) {
-                        // Prüfe, ob der Zahltag in diesem Monat noch kommt
-                        let thisMonthZahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), zahltagNum, 23, 59, 59, 999);
-                        if (jetzt <= thisMonthZahltag) {
-                            zahltag = thisMonthZahltag;
+                if (billing_day) {
+                    const billingDayNum = parseInt(billing_day, 10);
+                    if (!isNaN(billingDayNum) && billingDayNum > 0 && billingDayNum <= 31) {
+                        let thisMonthBilling = new Date(jetzt.getFullYear(), jetzt.getMonth(), billingDayNum, 23, 59, 59, 999);
+                        if (jetzt <= thisMonthBilling) {
+                            zahltag = thisMonthBilling;
                         } else {
-                            // Nächster Monat
-                            zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, zahltagNum, 23, 59, 59, 999);
+                            zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, billingDayNum, 23, 59, 59, 999);
                         }
+                        next_pay = zahltag.toISOString();
                     } else {
-                        // Fallback: Monatsende
                         zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
+                        next_pay = zahltag.toISOString();
                     }
                 } else {
                     zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
+                    next_pay = zahltag.toISOString();
                 }
-                next_pay = zahltag.toISOString();
                 // Alle Nutzer holen
                 const nutzerRows = (await env.DB.prepare('SELECT created_at, canceled_at, email FROM payment_setups WHERE payment_authorized = 1').all()).results || [];
                 // Nutzungsminuten berechnen
@@ -455,9 +456,10 @@ export default {
                 email: row.email,
                 stripe_id: row.stripe_id,
                 method: row.payment_method,
-                since: row.created_at || null, // Registrierungsdatum
-                canceled_at: row.canceled_at || null, // Kündigungsdatum
+                since: row.created_at || null,
+                canceled_at: row.canceled_at || null,
                 next_pay,
+                billing_day_env,
                 amount: amount !== null ? parseFloat(amount.toFixed(2)) : null,
                 nutzungsminuten
             }), {
