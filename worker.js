@@ -623,8 +623,8 @@ export default {
                             description: `MAC-SMP Monatsbeitrag ${abrechnungsmonat}`,
                             confirm: 'true',
                             off_session: 'true',
-                            payment_method_types: 'card,sepa_debit'
-                        })
+                        }).toString() +
+    '&payment_method_types[]=card&payment_method_types[]=sepa_debit',
                     });
                     const paymentIntentData = await paymentIntentRes.json();
                     // Immer loggen, egal ob Erfolg oder Fehler
