@@ -211,6 +211,7 @@ export default {
                 const formData = new URLSearchParams();
                 formData.append('mode', 'setup');
                 formData.append('customer_email', email);
+                formData.append('customer_creation', 'always'); // explizit Customer immer anlegen
                 formData.append('success_url', `${env.WEBSITE_URL}/payment-setup-success?session_id={CHECKOUT_SESSION_ID}`);
                 formData.append('cancel_url', `${env.WEBSITE_URL}/payment-setup-cancel`);
                 formData.append('payment_method_types[]', 'card');
