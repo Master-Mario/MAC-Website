@@ -241,6 +241,10 @@ export default {
                             .bind(minecraftUuid, email, session.id, false, "unknown", new Date().toISOString(), null)
                             .run();
                     }
+                    // Speichere zusätzlich die Customer-ID, falls sie schon in der Session enthalten ist
+                    if (session.customer) {
+                        await env.DB.prepare("UPDATE payment_setups SET stripe_id = ? WHERE email = ?").bind(session.customer, email).run();
+                    }
                     return new Response(JSON.stringify({ url: session.url }), {
                         headers: { 'Content-Type': 'application/json' }
                     });
