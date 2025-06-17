@@ -615,6 +615,15 @@ export default {
         });
     },
     // Führt die monatliche Abrechnung durch
+    async scheduled(event, env, ctx) {
+        // Prüfe, ob heute der Abrechnungstag ist
+        const abrechnungstag = parseInt(env.BILLING_DAY || '1', 10);
+        const now = new Date();
+        if (now.getDate() !== abrechnungstag) {
+            return; // Nur am Abrechnungstag ausführen
+        }
+        await this.runMonthlyBilling(env);
+    },
     async runMonthlyBilling(env) {
         await ensurePaymentSetupsTable(env);
         await ensureBillingHistoryTable(env);
