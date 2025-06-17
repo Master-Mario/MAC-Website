@@ -439,14 +439,14 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Robuste Berechnung der im aktuellen Monat genutzten Sekunden
+            // Kündigungsdatum auf Monatsende setzen
             try {
                 // Hole aktuellen Eintrag
                 const row = await env.DB.prepare('SELECT created_at, used_seconds_this_month FROM payment_setups WHERE email = ?').bind(session.user.email).first();
                 let usedSeconds = 0;
                 let createdAt = row?.created_at ? new Date(row.created_at) : null;
                 let now = new Date();
-                let lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                let monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
                 let monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
                 // Fallback falls Wert nicht gesetzt
                 if (typeof row?.used_seconds_this_month === 'number') {
@@ -457,12 +457,12 @@ export default {
                     usedSeconds += Math.floor((now - createdAt) / 1000);
                 } else {
                     // Wenn created_at vor Monatsanfang liegt, zähle nur Zeit seit Monatsanfang
-                    // (Abo war schon vorher aktiv, aber nur aktuelle Monatszeit zählt)
                     usedSeconds = Math.floor((now - monthStart) / 1000);
                 }
+                // Kündigung zum Monatsende
                 await env.DB.prepare(
                     'UPDATE payment_setups SET canceled_at = ?, used_seconds_this_month = ? WHERE email = ?'
-                ).bind(now.toISOString(), usedSeconds, session.user.email).run();
+                ).bind(monthEnd.toISOString(), usedSeconds, session.user.email).run();
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
                     status: 500,
