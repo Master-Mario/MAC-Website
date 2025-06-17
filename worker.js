@@ -393,6 +393,28 @@ export default {
             } catch (err) {
                 // Fallback: UUID anzeigen
             }
+            // amount bis zum nächsten Zahltag (Ende des Monats)
+            let amount = null;
+            let next_pay = null;
+            if (row.created_at) {
+                const serverKosten = parseFloat(env.SERVER_COSTS || '10');
+                const seit = new Date(row.created_at);
+                const jetzt = new Date();
+                // Zahltag = Monatsende
+                const zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
+                next_pay = zahltag.toISOString();
+                // Anteil berechnen: (Tage seit Registrierung bis Zahltag) / (Tage im Monat)
+                const tageImMonat = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0).getDate();
+                let tageGesamt = (zahltag - seit) / (1000 * 60 * 60 * 24);
+                if (tageGesamt > tageImMonat) tageGesamt = tageImMonat; // Maximal voller Monat
+                if (tageGesamt < 1) tageGesamt = 1; // Mindestens 1 Tag
+                // Wenn im aktuellen Monat registriert, anteilig, sonst voller Monat
+                if (seit.getMonth() === jetzt.getMonth() && seit.getFullYear() === jetzt.getFullYear()) {
+                    amount = serverKosten * (tageGesamt / tageImMonat);
+                } else {
+                    amount = serverKosten;
+                }
+            }
             // Beispielhafte Felder für die Anzeige
             return new Response(JSON.stringify({
                 active: !!row.payment_authorized,
@@ -402,8 +424,8 @@ export default {
                 method: row.payment_method,
                 since: row.created_at || null, // Registrierungsdatum
                 canceled_at: row.canceled_at || null, // Kündigungsdatum
-                next_pay: null, // Optional: Nächster Zahltag, falls berechnet
-                amount: null // Optional: Betrag, falls berechnet
+                next_pay,
+                amount: amount !== null ? parseFloat(amount.toFixed(2)) : null
             }), {
                 headers: { 'Content-Type': 'application/json' }
             });
