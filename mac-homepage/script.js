@@ -223,8 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (!minecraftUsername || !email) {
-                paymentMessage.textContent = 'Bitte fülle alle erforderlichen Felder aus.';
+            if (!minecraftUsername) {
+                paymentMessage.textContent = 'Bitte gib deinen Minecraft-Username an.';
                 return;
             }
 
@@ -373,13 +373,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const aboRes = await fetch('/api/d1/abo-status', { credentials: 'include' });
                 if (aboRes.ok) {
                     const abo = await aboRes.json();
-                    if (abo && (abo.active || abo.canceled_at)) {
-                        // User ist registriert (aktiv oder gekündigt): Section ausblenden
+                    // Formular nur ausblenden, wenn aktiv (nicht gekündigt)
+                    if (abo && abo.active && !abo.canceled_at) {
                         if (smpSection) smpSection.style.display = 'none';
                         return;
                     }
                 }
-                // User ist eingeloggt, aber nicht registriert
+                // User ist eingeloggt, aber nicht aktiv registriert oder gekündigt: Formular anzeigen
                 if (registrationSection) registrationSection.style.display = 'block';
                 if (loginPromptSection) loginPromptSection.style.display = 'none';
                 if (smpSection) smpSection.style.display = '';
