@@ -1,3 +1,50 @@
+// Globale Hilfsfunktionen für Tabellen-Setup
+async function ensurePaymentSetupsTable(env) {
+    const check = await env.DB.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='payment_setups';"
+    ).first();
+    if (!check) {
+        await env.DB.prepare(`
+            CREATE TABLE payment_setups (
+                minecraft_uuid TEXT PRIMARY KEY,
+                email TEXT NOT NULL,
+                stripe_id TEXT NOT NULL,
+                payment_authorized BOOLEAN NOT NULL DEFAULT false,
+                payment_method TEXT NOT NULL DEFAULT 'unknown',
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                canceled_at TEXT DEFAULT NULL,
+                used_seconds_this_month INTEGER NOT NULL DEFAULT 0
+            );
+        `).run();
+    } else {
+        const columns = await env.DB.prepare("PRAGMA table_info(payment_setups);").all();
+        const colArray = columns.results || columns;
+        if (!colArray.some(col => col.name === 'created_at')) {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT;").run();
+            await env.DB.prepare("UPDATE payment_setups SET created_at = ? WHERE created_at IS NULL;").bind(new Date().toISOString()).run();
+        }
+        if (!colArray.some(col => col.name === 'canceled_at')) {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT;").run();
+        }
+        if (!colArray.some(col => col.name === 'used_seconds_this_month')) {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN used_seconds_this_month INTEGER NOT NULL DEFAULT 0;").run();
+        }
+    }
+}
+
+async function ensureBillingHistoryTable(env) {
+    await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS billing_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            abrechnungsmonat TEXT NOT NULL,
+            nutzungszeit INTEGER NOT NULL,
+            kostenanteil REAL NOT NULL,
+            timestamp TEXT NOT NULL
+        );
+    `).run();
+}
+
 export default {
     async fetch(request, env, ctx) {
         const jwtSecret = new TextEncoder().encode(env.JWT_SECRET);
@@ -121,61 +168,6 @@ export default {
                 user: session?.user || null
             }), { headers });
         }
-
-        // Hilfsfunktion: Stellt sicher, dass die Tabelle payment_setups existiert
-        async function ensurePaymentSetupsTable(env) {
-            // Prüfe, ob Tabelle existiert
-            const check = await env.DB.prepare(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='payment_setups';"
-            ).first();
-            if (!check) {
-                // Tabelle anlegen (minecraft_uuid als PRIMARY KEY)
-                await env.DB.prepare(`
-                    CREATE TABLE payment_setups (
-                        minecraft_uuid TEXT PRIMARY KEY,
-                        email TEXT NOT NULL,
-                        stripe_id TEXT NOT NULL,
-                        payment_authorized BOOLEAN NOT NULL DEFAULT false,
-                        payment_method TEXT NOT NULL DEFAULT 'unknown',
-                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                        canceled_at TEXT DEFAULT NULL,
-                        used_seconds_this_month INTEGER NOT NULL DEFAULT 0
-                    );
-                `).run();
-            } else {
-                // Prüfe, ob Spalte created_at und canceled_at existieren, falls nicht, füge sie hinzu
-                const columns = await env.DB.prepare("PRAGMA table_info(payment_setups);").all();
-                const colArray = columns.results || columns; // Fallback falls .results nicht existiert
-                if (!colArray.some(col => col.name === 'created_at')) {
-                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT;").run();
-                    // Setze für bestehende Zeilen ein aktuelles Datum
-                    await env.DB.prepare("UPDATE payment_setups SET created_at = ? WHERE created_at IS NULL;").bind(new Date().toISOString()).run();
-                }
-                if (!colArray.some(col => col.name === 'canceled_at')) {
-                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT;").run();
-                }
-                if (!colArray.some(col => col.name === 'used_seconds_this_month')) {
-                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN used_seconds_this_month INTEGER NOT NULL DEFAULT 0;").run();
-                }
-            }
-        }
-
-        // Hilfsfunktion: Stellt sicher, dass die Tabelle billing_history existiert
-        async function ensureBillingHistoryTable(env) {
-            await env.DB.prepare(`
-                CREATE TABLE IF NOT EXISTS billing_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    email TEXT NOT NULL,
-                    abrechnungsmonat TEXT NOT NULL,
-                    nutzungszeit INTEGER NOT NULL,
-                    kostenanteil REAL NOT NULL,
-                    timestamp TEXT NOT NULL
-                );
-            `).run();
-        }
-
-        // Vorheriger Endpunkt: /create-checkout-session
-        // ...existing code for /create-checkout-session wurde entfernt oder kommentiert...
 
         if (path === '/create-checkout-session' && method === 'POST') {
             await ensurePaymentSetupsTable(env);
