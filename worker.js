@@ -308,13 +308,36 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
+            // NEU: payment_method von Stripe holen
+            let paymentMethodId = null;
+            try {
+                // Versuche zuerst SEPA
+                let pmRes = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${customerId}&type=sepa_debit`, {
+                    headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` }
+                });
+                let pmData = await pmRes.json();
+                if (pmData.data && pmData.data.length > 0) {
+                    paymentMethodId = pmData.data[0].id;
+                } else {
+                    // Fallback: Card
+                    pmRes = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${customerId}&type=card`, {
+                        headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` }
+                    });
+                    pmData = await pmRes.json();
+                    if (pmData.data && pmData.data.length > 0) {
+                        paymentMethodId = pmData.data[0].id;
+                    }
+                }
+            } catch (err) {
+                // Fehler ignorieren, paymentMethodId bleibt null
+            }
             // Update payment_authorized, payment_method und stripe_id (jetzt Customer-ID!) in der Datenbank
             try {
                 // Versuche zuerst nach Session-ID zu updaten
                 let result = await env.DB.prepare(
                     "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_id = ? WHERE stripe_id = ?"
                 )
-                    .bind(true, "stripe", customerId, sessionId)
+                    .bind(true, paymentMethodId || "stripe", customerId, sessionId)
                     .run();
                 // Falls kein Eintrag aktualisiert wurde, versuche nach E-Mail zu updaten (z.B. nach Datenbankbereinigung)
                 if (result.changes === 0) {
@@ -324,7 +347,7 @@ export default {
                         await env.DB.prepare(
                             "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_id = ? WHERE email = ?"
                         )
-                        .bind(true, "stripe", customerId, email)
+                        .bind(true, paymentMethodId || "stripe", customerId, email)
                         .run();
                     }
                 }
