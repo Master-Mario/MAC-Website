@@ -398,6 +398,7 @@ export default {
             // amount bis zum nächsten Zahltag (Ende des Monats)
             let amount = null;
             let next_pay = null;
+            let nutzungsminuten = 0;
             if (row.created_at) {
                 const serverKosten = parseFloat(env.SERVER_COSTS || '14');
                 const jetzt = new Date();
@@ -410,27 +411,25 @@ export default {
                 }
                 next_pay = zahltag.toISOString();
                 // Alle Nutzer holen
-                const nutzerRows = (await env.DB.prepare('SELECT created_at, canceled_at FROM payment_setups WHERE payment_authorized = 1').all()).results || [];
-                // Nutzertage berechnen
-                let summeNutzertage = 0;
-                let meineNutzertage = 0;
+                const nutzerRows = (await env.DB.prepare('SELECT created_at, canceled_at, email FROM payment_setups WHERE payment_authorized = 1').all()).results || [];
+                // Nutzungsminuten berechnen
+                let summeNutzerminuten = 0;
+                let meineNutzerminuten = 0;
                 for (const nutzer of nutzerRows) {
                     const reg = new Date(nutzer.created_at);
                     const end = nutzer.canceled_at ? new Date(nutzer.canceled_at) : zahltag;
-                    // Startdatum: max(registriert, Monatsanfang)
-                    const monatStart = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1);
+                    const monatStart = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1, 0, 0, 0, 0);
                     const start = reg > monatStart ? reg : monatStart;
-                    // Enddatum: min(zahltag, gekündigt)
                     const stop = end < zahltag ? end : zahltag;
-                    let tage = Math.ceil((stop - start) / (1000 * 60 * 60 * 24));
-                    if (tage < 0) tage = 0;
-                    summeNutzertage += tage;
-                    if (nutzer.created_at === row.created_at && nutzer.canceled_at === row.canceled_at) {
-                        meineNutzertage = tage;
+                    let minuten = Math.max(0, Math.floor((stop - start) / 1000 / 60));
+                    summeNutzerminuten += minuten;
+                    if (nutzer.email === row.email) {
+                        meineNutzerminuten = minuten;
                     }
                 }
-                if (summeNutzertage > 0) {
-                    amount = serverKosten * (meineNutzertage / summeNutzertage);
+                nutzungsminuten = meineNutzerminuten;
+                if (summeNutzerminuten > 0) {
+                    amount = serverKosten * (meineNutzerminuten / summeNutzerminuten);
                 } else {
                     amount = 0;
                 }
@@ -445,7 +444,8 @@ export default {
                 since: row.created_at || null, // Registrierungsdatum
                 canceled_at: row.canceled_at || null, // Kündigungsdatum
                 next_pay,
-                amount: amount !== null ? parseFloat(amount.toFixed(2)) : null
+                amount: amount !== null ? parseFloat(amount.toFixed(2)) : null,
+                nutzungsminuten
             }), {
                 headers: { 'Content-Type': 'application/json' }
             });
