@@ -319,6 +319,8 @@ export default {
             }
             // NEU: payment_method von Stripe holen
             let paymentMethodId = null;
+            let paymentMethodType = null;
+            let sepaMandateValid = true;
             try {
                 // Versuche zuerst SEPA
                 let pmRes = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${customerId}&type=sepa_debit`, {
@@ -327,6 +329,21 @@ export default {
                 let pmData = await pmRes.json();
                 if (pmData.data && pmData.data.length > 0) {
                     paymentMethodId = pmData.data[0].id;
+                    paymentMethodType = 'sepa_debit';
+                    // --- SEPA-Mandat prüfen ---
+                    const mandateId = pmData.data[0].sepa_debit && pmData.data[0].sepa_debit.mandate;
+                    if (mandateId) {
+                        // Mandat von Stripe holen
+                        const mandateRes = await fetch(`https://api.stripe.com/v1/mandates/${mandateId}`, {
+                            headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` }
+                        });
+                        const mandate = await mandateRes.json();
+                        if (!mandateRes.ok || !mandate || mandate.status !== 'active') {
+                            sepaMandateValid = false;
+                        }
+                    } else {
+                        sepaMandateValid = false;
+                    }
                 } else {
                     // Fallback: Card
                     pmRes = await fetch(`https://api.stripe.com/v1/payment_methods?customer=${customerId}&type=card`, {
@@ -335,10 +352,18 @@ export default {
                     pmData = await pmRes.json();
                     if (pmData.data && pmData.data.length > 0) {
                         paymentMethodId = pmData.data[0].id;
+                        paymentMethodType = 'card';
                     }
                 }
             } catch (err) {
                 // Fehler ignorieren, paymentMethodId bleibt null
+            }
+            // Wenn SEPA gewählt, aber Mandat nicht valide, Fehler zurückgeben
+            if (paymentMethodType === 'sepa_debit' && !sepaMandateValid) {
+                return new Response(JSON.stringify({ error: 'Das SEPA-Lastschriftmandat ist nicht gültig oder nicht aktiv. Bitte erneut versuchen oder andere Zahlungsmethode wählen.' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
             }
             // Update payment_authorized, payment_method und stripe_id (jetzt Customer-ID!) in der Datenbank
             try {

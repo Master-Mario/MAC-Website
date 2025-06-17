@@ -223,8 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (!minecraftUsername || !email) {
-                paymentMessage.textContent = 'Bitte fülle alle erforderlichen Felder aus.';
+            if (!minecraftUsername) {
+                paymentMessage.textContent = 'Bitte gib deinen Minecraft-Username an.';
                 return;
             }
 
