@@ -483,9 +483,9 @@ export default {
                 let now = new Date();
                 // Zahltag aus .env oder Monatsende
                 let zahltag;
-                if (env.ZAHLTAG) {
-                    // env.ZAHLTAG als Tag des Monats interpretieren (z.B. "28")
-                    const zahltagNum = parseInt(env.ZAHLTAG, 10);
+                if (env.BILLING_DAY) {
+                    // env.BILLING_DAY als Tag des Monats interpretieren (z.B. "28")
+                    const zahltagNum = parseInt(env.BILLING_DAY, 10);
                     if (!isNaN(zahltagNum) && zahltagNum > 0 && zahltagNum <= 31) {
                         // Prüfe, ob der Zahltag in diesem Monat noch kommt
                         let thisMonthZahltag = new Date(now.getFullYear(), now.getMonth(), zahltagNum, 23, 59, 59, 999);
@@ -544,8 +544,8 @@ export default {
         const abrechnungsmonat = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         // Zahltag aus .env oder Monatsende
         let zahltag;
-        if (env.ZAHLTAG) {
-            zahltag = new Date(env.ZAHLTAG);
+        if (env.BILLING_DAY) {
+            zahltag = new Date(env.BILLING_DAY);
         } else {
             zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         }
@@ -593,4 +593,56 @@ export default {
             await env.DB.prepare('UPDATE payment_setups SET used_seconds_this_month = 0 WHERE email = ?').bind(nutzer.email).run();
         }
     }
+}
+
+// Hilfsfunktion: Stellt sicher, dass die Tabelle payment_setups existiert
+async function ensurePaymentSetupsTable(env) {
+    // Prüfe, ob Tabelle existiert
+    const check = await env.DB.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='payment_setups';"
+    ).first();
+    if (!check) {
+        // Tabelle anlegen (minecraft_uuid als PRIMARY KEY)
+        await env.DB.prepare(`
+            CREATE TABLE payment_setups (
+                minecraft_uuid TEXT PRIMARY KEY,
+                email TEXT NOT NULL,
+                stripe_id TEXT NOT NULL,
+                payment_authorized BOOLEAN NOT NULL DEFAULT false,
+                payment_method TEXT NOT NULL DEFAULT 'unknown',
+                created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                canceled_at TEXT DEFAULT NULL,
+                used_seconds_this_month INTEGER NOT NULL DEFAULT 0
+            );
+        `).run();
+    } else {
+        // Prüfe, ob Spalte created_at und canceled_at existieren, falls nicht, füge sie hinzu
+        const columns = await env.DB.prepare("PRAGMA table_info(payment_setups);").all();
+        const colArray = columns.results || columns; // Fallback falls .results nicht existiert
+        if (!colArray.some(col => col.name === 'created_at')) {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT;").run();
+            // Setze für bestehende Zeilen ein aktuelles Datum
+            await env.DB.prepare("UPDATE payment_setups SET created_at = ? WHERE created_at IS NULL;").bind(new Date().toISOString()).run();
+        }
+        if (!colArray.some(col => col.name === 'canceled_at')) {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT;").run();
+        }
+        if (!colArray.some(col => col.name === 'used_seconds_this_month')) {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN used_seconds_this_month INTEGER NOT NULL DEFAULT 0;").run();
+        }
+    }
+}
+
+// Hilfsfunktion: Stellt sicher, dass die Tabelle billing_history existiert
+async function ensureBillingHistoryTable(env) {
+    await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS billing_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            abrechnungsmonat TEXT NOT NULL,
+            nutzungszeit INTEGER NOT NULL,
+            kostenanteil REAL NOT NULL,
+            timestamp TEXT NOT NULL
+        );
+    `).run();
 }
