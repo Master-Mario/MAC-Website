@@ -640,21 +640,27 @@ export default {
             if (nutzer.row.payment_authorized && nutzer.row.stripe_id && kostenanteil > 0) {
                 try {
                     // Stripe PaymentIntent erstellen (Betrag in Cent, EUR)
+                    const paymentIntentBody = new URLSearchParams({
+                        amount: Math.round(kostenanteil * 100).toString(),
+                        currency: 'eur',
+                        customer: nutzer.row.stripe_id, // stripe_id als customer_id gespeichert
+                        description: `MAC-SMP Monatsbeitrag ${abrechnungsmonat}`,
+                        confirm: 'true',
+                        off_session: 'true',
+                    });
+                    // Wenn payment_method in DB vorhanden, an Stripe übergeben
+                    if (nutzer.row.payment_method && nutzer.row.payment_method !== 'unknown' && nutzer.row.payment_method !== 'stripe') {
+                        paymentIntentBody.append('payment_method', nutzer.row.payment_method);
+                    }
+                    paymentIntentBody.append('payment_method_types[]', 'card');
+                    paymentIntentBody.append('payment_method_types[]', 'sepa_debit');
                     const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
-                        body: new URLSearchParams({
-                            amount: Math.round(kostenanteil * 100).toString(),
-                            currency: 'eur',
-                            customer: nutzer.row.stripe_id, // stripe_id als customer_id gespeichert
-                            description: `MAC-SMP Monatsbeitrag ${abrechnungsmonat}`,
-                            confirm: 'true',
-                            off_session: 'true',
-                        }).toString() +
-    '&payment_method_types[]=card&payment_method_types[]=sepa_debit',
+                        body: paymentIntentBody.toString(),
                     });
                     const paymentIntentData = await paymentIntentRes.json();
                     // Immer loggen, egal ob Erfolg oder Fehler
