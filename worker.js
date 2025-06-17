@@ -33,7 +33,7 @@ async function ensurePaymentSetupsTable(env) {
 }
 
 async function ensureBillingHistoryTable(env) {
-    await env.DB.prepare(` 
+    await env.DB.prepare(`
         CREATE TABLE IF NOT EXISTS billing_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT NOT NULL,
