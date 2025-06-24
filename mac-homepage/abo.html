@@ -216,13 +216,12 @@
                 if (abo.billing_day_env) {
                     // Zeige den nächsten Zahltag als konkretes Datum, nicht als "jeden X. im Monat"
                     if (abo.next_pay) {
-                        const nextPayDate = new Date(abo.next_pay);
-                        if (!isNaN(nextPayDate.getTime())) {
-                            // Format: 12.7.2025
-                            nextPayEl.textContent = `${nextPayDate.getDate()}.${nextPayDate.getMonth()+1}.${nextPayDate.getFullYear()}`;
-                        } else {
-                            nextPayEl.textContent = '-';
-                        }
+                        const nextPayDate = abo.next_pay.toString().substring(0, abo.next_pay.toString().indexOf('T'))[0];
+                        const nextPayYear = nextPayDate.substring(0, nextPayDate.indexOf('-'));
+                        const nextYearPos = nextPayDate.indexOf('-') + 1;
+                        const nextPayMonth = nextPayDate.substring(nextYearPos, nextPayDate.indexOf('-', nextYearPos));
+                        const nextPayDay = nextPayDate.substring(nextPayDate.lastIndexOf('-') + 1);
+                        nextPayEl.textContent = `${nextPayDay}.${nextPayMonth}.${nextPayYear}`;
                     } else {
                         nextPayEl.textContent = '-';
                     }
