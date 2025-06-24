@@ -214,12 +214,16 @@
                 mcEl.textContent = abo.minecraft_username || '-';
                 // --- next_pay und billing_day_env anzeigen ---
                 if (abo.next_pay) {
-                    const nextPayDate = abo.next_pay.toString().substring(0, abo.next_pay.toString().indexOf('T'))[0];
-                    const nextPayYear = nextPayDate.substring(0, nextPayDate.indexOf('-'));
-                    const nextYearPos = nextPayDate.indexOf('-') + 1;
-                    const nextPayMonth = nextPayDate.substring(nextYearPos, nextPayDate.indexOf('-', nextYearPos));
-                    const nextPayDay = nextPayDate.substring(nextPayDate.lastIndexOf('-') + 1);
-                    nextPayEl.textContent = `${nextPayDay}.${nextPayMonth}.${nextPayYear}`;
+                    // next_pay ist ein ISO-Datum, z.B. "2025-07-12T23:59:59.999Z"
+                    const dateObj = new Date(abo.next_pay);
+                    if (!isNaN(dateObj.getTime())) {
+                        const day = dateObj.getDate();
+                        const month = dateObj.getMonth() + 1;
+                        const year = dateObj.getFullYear();
+                        nextPayEl.textContent = `${day}.${month}.${year}`;
+                    } else {
+                        nextPayEl.textContent = '-';
+                    }
                 } else {
                     nextPayEl.textContent = '-';
                 }
