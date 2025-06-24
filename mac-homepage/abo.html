@@ -214,13 +214,22 @@
                 mcEl.textContent = abo.minecraft_username || '-';
                 // --- next_pay und billing_day_env anzeigen ---
                 if (abo.billing_day_env) {
-                    // Zeige den Billing-Tag aus der .env, falls vorhanden
-                    nextPayEl.textContent = 'jeden ' + abo.billing_day_env + '. im Monat';
+                    // Zeige den nächsten Zahltag als konkretes Datum, nicht als "jeden X. im Monat"
+                    if (abo.next_pay) {
+                        const nextPayDate = new Date(abo.next_pay);
+                        if (!isNaN(nextPayDate.getTime())) {
+                            // Format: 12.7.2025
+                            nextPayEl.textContent = `${nextPayDate.getDate()}.${nextPayDate.getMonth()+1}.${nextPayDate.getFullYear()}`;
+                        } else {
+                            nextPayEl.textContent = '-';
+                        }
+                    } else {
+                        nextPayEl.textContent = '-';
+                    }
                 } else if (abo.next_pay) {
-                    // next_pay ist ein ISO-Datum wie "2025-06-30T23:59:59.999Z"
                     const nextPayDate = new Date(abo.next_pay);
                     if (!isNaN(nextPayDate.getTime())) {
-                        nextPayEl.textContent = nextPayDate.toLocaleDateString('de-AT');
+                        nextPayEl.textContent = `${nextPayDate.getDate()}.${nextPayDate.getMonth()+1}.${nextPayDate.getFullYear()}`;
                     } else {
                         nextPayEl.textContent = '-';
                     }
