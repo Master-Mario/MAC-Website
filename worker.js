@@ -383,28 +383,19 @@ export default {
             let amount = null;
             let next_pay = null;
             if (row.created_at) {
-                const serverKosten = parseFloat(env.SERVER_COSTS || '14');
+                const serverKosten = parseFloat(env.SERVER_COSTS || '0');
                 const jetzt = new Date();
                 let billing_day = env.BILLING_DAY;
                 let zahltag;
                 if (billing_day) {
-                    const billingDayNum = parseInt(billing_day, 10);
-                    if (!isNaN(billingDayNum) && billingDayNum > 0 && billingDayNum <= 31) {
-                        let thisMonthBilling = new Date(jetzt.getFullYear(), jetzt.getMonth(), billingDayNum, 23, 59, 59, 999);
-                        if (jetzt <= thisMonthBilling) {
-                            zahltag = thisMonthBilling;
-                        } else {
-                            zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, billingDayNum, 23, 59, 59, 999);
-                        }
-                        next_pay = zahltag.toISOString();
-                    } else {
-                        zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
-                        next_pay = zahltag.toISOString();
+                    let zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), parseInt(billing_day, 10), 23, 59, 59, 999);
+                    if (jetzt.getDay() >= zahltag.getDay()){
+                        zahltag.setMonth(zahltag.getMonth() + 1);
                     }
                 } else {
                     zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
-                    next_pay = zahltag.toISOString();
                 }
+                next_pay = zahltag.toISOString();
                 // Anzahl aktiver Nutzer (payment_authorized = 1, nicht gekündigt oder Kündigung in der Zukunft)
                 const nutzerRows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(jetzt.toISOString()).all()).results || [];
                 const nutzerAnzahl = nutzerRows.length > 0 ? nutzerRows.length : 1;
