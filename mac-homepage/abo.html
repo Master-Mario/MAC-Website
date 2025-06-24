@@ -213,7 +213,10 @@
                 sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : '-';
                 mcEl.textContent = abo.minecraft_username || '-';
                 // --- next_pay und billing_day_env anzeigen ---
-                if (abo.next_pay) {
+                if (abo.billing_day_env) {
+                    // Zeige den Billing-Tag aus der .env, falls vorhanden
+                    nextPayEl.textContent = 'jeden ' + abo.billing_day_env + '. im Monat';
+                } else if (abo.next_pay) {
                     // next_pay ist ein ISO-Datum wie "2025-06-30T23:59:59.999Z"
                     const nextPayDate = new Date(abo.next_pay);
                     if (!isNaN(nextPayDate.getTime())) {
@@ -221,9 +224,6 @@
                     } else {
                         nextPayEl.textContent = '-';
                     }
-                } else if (abo.billing_day_env) {
-                    // Fallback: Zeige den Billing-Tag aus der .env
-                    nextPayEl.textContent = 'jeden ' + abo.billing_day_env + '. im Monat';
                 } else {
                     nextPayEl.textContent = '-';
                 }
