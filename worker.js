@@ -136,27 +136,10 @@ export default {
                         email TEXT NOT NULL,
                         stripe_id TEXT NOT NULL,
                         payment_authorized BOOLEAN NOT NULL DEFAULT false,
-                        payment_method TEXT NOT NULL DEFAULT 'unknown',
                         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-                        canceled_at TEXT DEFAULT NULL,
-                        used_seconds_this_month INTEGER NOT NULL DEFAULT 0
+                        canceled_at TEXT DEFAULT NULL
                     );
                 `).run();
-            } else {
-                // Prüfe, ob Spalte created_at und canceled_at existieren, falls nicht, füge sie hinzu
-                const columns = await env.DB.prepare("PRAGMA table_info(payment_setups);").all();
-                const colArray = columns.results || columns; // Fallback falls .results nicht existiert
-                if (!colArray.some(col => col.name === 'created_at')) {
-                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT;").run();
-                    // Setze für bestehende Zeilen ein aktuelles Datum
-                    await env.DB.prepare("UPDATE payment_setups SET created_at = ? WHERE created_at IS NULL;").bind(new Date().toISOString()).run();
-                }
-                if (!colArray.some(col => col.name === 'canceled_at')) {
-                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT;").run();
-                }
-                if (!colArray.some(col => col.name === 'used_seconds_this_month')) {
-                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN used_seconds_this_month INTEGER NOT NULL DEFAULT 0;").run();
-                }
             }
         }
 
@@ -167,7 +150,6 @@ export default {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     email TEXT NOT NULL,
                     abrechnungsmonat TEXT NOT NULL,
-                    nutzungszeit INTEGER NOT NULL,
                     kostenanteil REAL NOT NULL,
                     timestamp TEXT NOT NULL
                 );
@@ -235,8 +217,8 @@ export default {
                     if (existing) {
                         // Wenn gekündigt, reaktiviere bestehenden Eintrag (statt INSERT)
                         if (existing.canceled_at) {
-                            await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 0, stripe_id = ?, payment_method = ?, created_at = ?, canceled_at = NULL WHERE minecraft_uuid = ? OR email = ?")
-                                .bind(session.id, "unknown", new Date().toISOString(), minecraftUuid, email)
+                            await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 0, stripe_id = ?, created_at = ?, canceled_at = NULL WHERE minecraft_uuid = ? OR email = ?")
+                                .bind(session.id, new Date().toISOString(), minecraftUuid, email)
                                 .run();
                         } else {
                             return new Response(JSON.stringify({ error: 'Du bist bereits registriert. Bitte verwende deinen bestehenden Account.' }), {
@@ -247,9 +229,9 @@ export default {
                     } else {
                         // Kein bestehender Eintrag: normal anlegen
                         await env.DB.prepare(
-                            "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, payment_method, created_at, canceled_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                            "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at) VALUES (?, ?, ?, ?, ?, ?)"
                         )
-                            .bind(minecraftUuid, email, session.id, false, "unknown", new Date().toISOString(), null)
+                            .bind(minecraftUuid, email, session.id, false, new Date().toISOString(), null)
                             .run();
                     }
                     return new Response(JSON.stringify({ url: session.url }), {
@@ -377,7 +359,6 @@ export default {
             const row = await env.DB.prepare(
                 'SELECT * FROM payment_setups WHERE email = ?'
             ).bind(session.user.email).first();
-            // --- Änderung: BILLING_DAY statt ZAHLTAG ---
             let billing_day_env = env.BILLING_DAY ? env.BILLING_DAY : null;
             if (!row) {
                 return new Response(JSON.stringify({ active: false, billing_day_env }), {
@@ -398,14 +379,12 @@ export default {
             } catch (err) {
                 // Fallback: UUID anzeigen
             }
-            // amount bis zum nächsten Zahltag (Ende des Monats)
+            // amount: Serverkosten geteilt durch Anzahl aktiver Nutzer
             let amount = null;
             let next_pay = null;
-            let nutzungsminuten = 0;
             if (row.created_at) {
                 const serverKosten = parseFloat(env.SERVER_COSTS || '14');
                 const jetzt = new Date();
-                // --- Änderung: BILLING_DAY statt ZAHLTAG ---
                 let billing_day = env.BILLING_DAY;
                 let zahltag;
                 if (billing_day) {
@@ -426,43 +405,21 @@ export default {
                     zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
                     next_pay = zahltag.toISOString();
                 }
-                // Alle Nutzer holen
-                const nutzerRows = (await env.DB.prepare('SELECT created_at, canceled_at, email FROM payment_setups WHERE payment_authorized = 1').all()).results || [];
-                // Nutzungsminuten berechnen
-                let summeNutzerminuten = 0;
-                let meineNutzerminuten = 0;
-                for (const nutzer of nutzerRows) {
-                    const reg = new Date(nutzer.created_at);
-                    const end = nutzer.canceled_at ? new Date(nutzer.canceled_at) : zahltag;
-                    const monatStart = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1, 0, 0, 0, 0);
-                    const start = reg > monatStart ? reg : monatStart;
-                    const stop = end < zahltag ? end : zahltag;
-                    let minuten = Math.max(0, Math.floor((stop - start) / 1000 / 60));
-                    summeNutzerminuten += minuten;
-                    if (nutzer.email === row.email) {
-                        meineNutzerminuten = minuten;
-                    }
-                }
-                nutzungsminuten = meineNutzerminuten;
-                if (summeNutzerminuten > 0) {
-                    amount = serverKosten * (meineNutzerminuten / summeNutzerminuten);
-                } else {
-                    amount = 0;
-                }
+                // Anzahl aktiver Nutzer (payment_authorized = 1, nicht gekündigt oder Kündigung in der Zukunft)
+                const nutzerRows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(jetzt.toISOString()).all()).results || [];
+                const nutzerAnzahl = nutzerRows.length > 0 ? nutzerRows.length : 1;
+                amount = serverKosten / nutzerAnzahl;
             }
-            // Beispielhafte Felder für die Anzeige
             return new Response(JSON.stringify({
                 active: !!row.payment_authorized,
                 minecraft_username: minecraftUsername,
                 email: row.email,
                 stripe_id: row.stripe_id,
-                method: row.payment_method,
                 since: row.created_at || null,
                 canceled_at: row.canceled_at || null,
                 next_pay,
                 billing_day_env,
-                amount: amount !== null ? parseFloat(amount.toFixed(2)) : null,
-                nutzungsminuten
+                amount: amount !== null ? parseFloat(amount.toFixed(2)) : null
             }), {
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -542,43 +499,33 @@ export default {
         await ensurePaymentSetupsTable(env);
         await ensureBillingHistoryTable(env);
         const now = new Date();
-        const abrechnungsmonat = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        // Zahltag aus .env oder Monatsende
+        // Zahltag bestimmen (Monatsende oder BILLING_DAY)
         let zahltag;
         if (env.BILLING_DAY) {
-            zahltag = new Date(env.BILLING_DAY);
+            const billingDayNum = parseInt(env.BILLING_DAY, 10);
+            if (!isNaN(billingDayNum) && billingDayNum > 0 && billingDayNum <= 31) {
+                let thisMonthBilling = new Date(now.getFullYear(), now.getMonth(), billingDayNum, 23, 59, 59, 999);
+                if (now <= thisMonthBilling) {
+                    zahltag = thisMonthBilling;
+                } else {
+                    zahltag = new Date(now.getFullYear(), now.getMonth() + 1, billingDayNum, 23, 59, 59, 999);
+                }
+            } else {
+                zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            }
         } else {
             zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         }
+        const abrechnungsmonat = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
         const serverKosten = parseFloat(env.SERVER_COSTS || '0');
-        // Alle Nutzer (auch gekündigte) holen
-        const rows = (await env.DB.prepare('SELECT * FROM payment_setups').all()).results || [];
-        // Nutzertage berechnen
-        let nutzerDaten = [];
-        let summeNutzerminuten = 0;
+        // Nur aktive Nutzer (registriert, nicht gekündigt oder Kündigung in der Zukunft)
+        const rows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(now.toISOString()).all()).results || [];
+        const nutzerAnzahl = rows.length > 0 ? rows.length : 1;
+        const kostenanteil = serverKosten / nutzerAnzahl;
         for (const row of rows) {
-            const reg = row.created_at ? new Date(row.created_at) : null;
-            const end = row.canceled_at ? new Date(row.canceled_at) : zahltag;
-            const monatStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-            // Startzeitpunkt für die Berechnung: max(registriert, Monatsanfang)
-            const start = reg && reg > monatStart ? reg : monatStart;
-            // Endzeitpunkt: min(zahltag, gekündigt)
-            const stop = end < zahltag ? end : zahltag;
-            let minuten = reg ? Math.max(0, Math.floor((stop - start) / 1000 / 60)) : 0;
-            summeNutzerminuten += minuten;
-            nutzerDaten.push({
-                email: row.email,
-                nutzungsminuten: minuten,
-                row
-            });
-        }
-        // Abrechnung und Speicherung
-        for (const nutzer of nutzerDaten) {
-            if (nutzer.nutzungsminuten === 0) continue;
-            const kostenanteil = summeNutzerminuten > 0 ? (nutzer.nutzungsminuten / summeNutzerminuten) * serverKosten : 0;
             // Stripe-Abbuchung, falls aktiviert und autorisiert
             try {
-                if (nutzer.row.payment_authorized && nutzer.row.stripe_id && nutzer.row.payment_method && kostenanteil > 0) {
+                if (row.payment_authorized && row.stripe_id && kostenanteil > 0) {
                     const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
                         method: 'POST',
                         headers: {
@@ -588,19 +535,15 @@ export default {
                         body: new URLSearchParams({
                             amount: Math.round(kostenanteil * 100).toString(), // Betrag in Cent
                             currency: 'eur',
-                            customer: nutzer.row.stripe_id,
-                            payment_method: nutzer.row.payment_method,
+                            customer: row.stripe_id,
                             off_session: 'true',
                             confirm: 'true',
-                            description: `Monatliche Serverkosten für ${abrechnungsmonat}`
+                            description: `Monatliche Serverkosten (MAC-SMP) für ${abrechnungsmonat}`
                         }).toString()
                     });
                     const paymentIntent = await paymentIntentRes.json();
-                    if (!paymentIntentRes.ok) {
-                        // Fehler loggen, aber nicht abbrechen
-                        if (env.LOG_ERRORS) {
-                            console.error('Stripe PaymentIntent Fehler:', paymentIntent.error ? paymentIntent.error.message : paymentIntent);
-                        }
+                    if (!paymentIntentRes.ok && env.LOG_ERRORS) {
+                        console.error('Stripe PaymentIntent Fehler:', paymentIntent.error ? paymentIntent.error.message : paymentIntent);
                     }
                 }
             } catch (err) {
@@ -611,19 +554,12 @@ export default {
             await env.DB.prepare(
                 'INSERT INTO billing_history (email, abrechnungsmonat, nutzungszeit, kostenanteil, timestamp) VALUES (?, ?, ?, ?, ?)'
             ).bind(
-                nutzer.email,
+                row.email,
                 abrechnungsmonat,
-                nutzer.nutzungsminuten,
+                0, // nutzungszeit entfällt, immer 0
                 kostenanteil,
                 now.toISOString()
             ).run();
-            // Sende E-Mail (Pseudo, da Worker keine SMTP hat)
-            if (env.SEND_EMAIL && typeof sendMail === 'function') {
-                await sendMail(nutzer.email, `Deine Abrechnung für ${abrechnungsmonat}`,
-                    `Du warst diesen Monat ${nutzer.nutzungsminuten} Minuten registriert. Dein Anteil an den Serverkosten beträgt: ${kostenanteil.toFixed(2)} EUR.`);
-            }
-            // Reset used_seconds_this_month (optional, falls nicht mehr benötigt)
-            await env.DB.prepare('UPDATE payment_setups SET used_seconds_this_month = 0 WHERE email = ?').bind(nutzer.email).run();
         }
     }
 }
@@ -642,27 +578,10 @@ async function ensurePaymentSetupsTable(env) {
                 email TEXT NOT NULL,
                 stripe_id TEXT NOT NULL,
                 payment_authorized BOOLEAN NOT NULL DEFAULT false,
-                payment_method TEXT NOT NULL DEFAULT 'unknown',
                 created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-                canceled_at TEXT DEFAULT NULL,
-                used_seconds_this_month INTEGER NOT NULL DEFAULT 0
+                canceled_at TEXT DEFAULT NULL
             );
         `).run();
-    } else {
-        // Prüfe, ob Spalte created_at und canceled_at existieren, falls nicht, füge sie hinzu
-        const columns = await env.DB.prepare("PRAGMA table_info(payment_setups);").all();
-        const colArray = columns.results || columns; // Fallback falls .results nicht existiert
-        if (!colArray.some(col => col.name === 'created_at')) {
-            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN created_at TEXT;").run();
-            // Setze für bestehende Zeilen ein aktuelles Datum
-            await env.DB.prepare("UPDATE payment_setups SET created_at = ? WHERE created_at IS NULL;").bind(new Date().toISOString()).run();
-        }
-        if (!colArray.some(col => col.name === 'canceled_at')) {
-            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN canceled_at TEXT;").run();
-        }
-        if (!colArray.some(col => col.name === 'used_seconds_this_month')) {
-            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN used_seconds_this_month INTEGER NOT NULL DEFAULT 0;").run();
-        }
     }
 }
 
@@ -673,7 +592,6 @@ async function ensureBillingHistoryTable(env) {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT NOT NULL,
             abrechnungsmonat TEXT NOT NULL,
-            nutzungszeit INTEGER NOT NULL,
             kostenanteil REAL NOT NULL,
             timestamp TEXT NOT NULL
         );
