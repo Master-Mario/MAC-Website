@@ -439,12 +439,13 @@ export default {
                 });
                 const paydayData = await paydayRes.json();
                 const nextPay = paydayData.next_pay;
-                if (!nextPay) throw new Error('Konnte nächsten Zahltag nicht ermitteln');
-                await env.DB.prepare(
+                if (!nextPay) throw new Error('Konnte nächsten Zahltag nicht ermitteln. paydayData: ' + JSON.stringify(paydayData));
+                const updateResult = await env.DB.prepare(
                     'UPDATE payment_setups SET canceled_at = ? WHERE email = ?'
                 ).bind(nextPay, session.user.email).run();
+                if (updateResult.changes === 0) throw new Error('Kein Datensatz aktualisiert. E-Mail: ' + session.user.email);
             } catch (err) {
-                return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
+                return new Response(JSON.stringify({ error: 'Kündigung fehlgeschlagen: ' + err.message }), {
                     status: 500,
                     headers: { 'Content-Type': 'application/json' }
                 });
