@@ -388,14 +388,14 @@ export default {
                 let billing_day = env.BILLING_DAY;
                 let zahltag;
                 if (billing_day) {
-                    let zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), parseInt(billing_day, 10), 23, 59, 59, 999);
+                    zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), parseInt(billing_day, 10), 23, 59, 59, 999);
                     if (jetzt.getDay() >= zahltag.getDay()){
                         zahltag.setMonth(zahltag.getMonth() + 1);
                     }
                 } else {
                     zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
                 }
-                next_pay = zahltag.toISOString();
+                next_pay = zahltag ? zahltag.toISOString() : null;
                 // Anzahl aktiver Nutzer (payment_authorized = 1, nicht gekündigt oder Kündigung in der Zukunft)
                 const nutzerRows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(jetzt.toISOString()).all()).results || [];
                 const nutzerAnzahl = nutzerRows.length > 0 ? nutzerRows.length : 1;
