@@ -470,25 +470,6 @@ export default {
     async runMonthlyBilling(env) {
         await ensurePaymentSetupsTable(env);
         await ensureBillingHistoryTable(env);
-        const now = new Date();
-        // Zahltag bestimmen (Monatsende oder BILLING_DAY)
-        let zahltag;
-        if (env.BILLING_DAY) {
-            const billingDayNum = parseInt(env.BILLING_DAY, 10);
-            if (!isNaN(billingDayNum) && billingDayNum > 0 && billingDayNum <= 31) {
-                let thisMonthBilling = new Date(now.getFullYear(), now.getMonth(), billingDayNum, 23, 59, 59, 999);
-                if (now <= thisMonthBilling) {
-                    zahltag = thisMonthBilling;
-                } else {
-                    zahltag = new Date(now.getFullYear(), now.getMonth() + 1, billingDayNum, 23, 59, 59, 999);
-                }
-            } else {
-                zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-            }
-        } else {
-            zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        }
-        const abrechnungsmonat = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
         const serverKosten = parseFloat(env.SERVER_COSTS || '0');
         // Nur aktive Nutzer (registriert, nicht gekündigt oder Kündigung in der Zukunft)
         const rows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(now.toISOString()).all()).results || [];
