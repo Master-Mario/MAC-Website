@@ -432,19 +432,28 @@ export default {
                 });
             }
             try {
-                // Hole nächsten Zahltag aus /api/d1/abo-status
-                const paydayRes = await fetch(env.WEBSITE_URL + '/api/d1/abo-status', {
-                    headers: { 'Cookie': request.headers.get('Cookie') || '' }
-                });
-                const paydayData = await paydayRes.json();
-                const nextPay = paydayData.next_pay;
-                if (!nextPay) throw new Error('Konnte nächsten Zahltag nicht ermitteln. paydayData: ' + JSON.stringify(paydayData));
-                // Prüfe, ob der Datensatz existiert
+                // --- next_pay direkt berechnen (wie in /api/d1/abo-status) ---
                 const row = await env.DB.prepare('SELECT * FROM payment_setups WHERE email = ?').bind(session.user.email).first();
                 if (!row) throw new Error('Kein Datensatz mit dieser E-Mail gefunden: ' + session.user.email);
+                let next_pay = null;
+                if (row.created_at) {
+                    const jetzt = new Date();
+                    let billing_day = env.BILLING_DAY;
+                    let zahltag;
+                    if (billing_day) {
+                        zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), parseInt(billing_day, 10), 12, 0, 0, 0);
+                        if (jetzt.getDate() >= zahltag.getDate()){
+                            zahltag.setMonth(zahltag.getMonth() + 1);
+                        }
+                    } else {
+                        zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 12, 0, 0, 0);
+                    }
+                    next_pay = zahltag ? zahltag.toISOString() : null;
+                }
+                if (!next_pay) throw new Error('Konnte nächsten Zahltag nicht ermitteln. row: ' + JSON.stringify(row));
                 const updateResult = await env.DB.prepare(
                     'UPDATE payment_setups SET canceled_at = ? WHERE email = ?'
-                ).bind(nextPay, session.user.email).run();
+                ).bind(next_pay, session.user.email).run();
                 if (updateResult.changes === 0) throw new Error('Kein Datensatz aktualisiert. E-Mail: ' + session.user.email + ' | row: ' + JSON.stringify(row));
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Kündigung fehlgeschlagen: ' + err.message }), {
