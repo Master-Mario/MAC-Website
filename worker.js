@@ -388,12 +388,12 @@ export default {
                 let billing_day = env.BILLING_DAY;
                 let zahltag;
                 if (billing_day) {
-                    zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), parseInt(billing_day, 10), 23, 59, 59, 999);
+                    zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), parseInt(billing_day, 10), 12, 0, 0, 0);
                     if (jetzt.getDate() >= zahltag.getDate()){
                         zahltag.setMonth(zahltag.getMonth() + 1);
                     }
                 } else {
-                    zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 23, 59, 59, 999);
+                    zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth() + 1, 0, 12, 0, 0, 0);
                 }
                 next_pay = zahltag ? zahltag.toISOString() : null;
                 // Anzahl aktiver Nutzer (payment_authorized = 1, nicht gekündigt oder Kündigung in der Zukunft)
