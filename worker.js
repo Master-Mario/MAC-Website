@@ -431,7 +431,6 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Kündigungsdatum auf nächsten Zahltag setzen
             try {
                 // Hole nächsten Zahltag aus /api/d1/abo-status
                 const paydayRes = await fetch(env.WEBSITE_URL + '/api/d1/abo-status', {
@@ -440,10 +439,13 @@ export default {
                 const paydayData = await paydayRes.json();
                 const nextPay = paydayData.next_pay;
                 if (!nextPay) throw new Error('Konnte nächsten Zahltag nicht ermitteln. paydayData: ' + JSON.stringify(paydayData));
+                // Prüfe, ob der Datensatz existiert
+                const row = await env.DB.prepare('SELECT * FROM payment_setups WHERE email = ?').bind(session.user.email).first();
+                if (!row) throw new Error('Kein Datensatz mit dieser E-Mail gefunden: ' + session.user.email);
                 const updateResult = await env.DB.prepare(
                     'UPDATE payment_setups SET canceled_at = ? WHERE email = ?'
                 ).bind(nextPay, session.user.email).run();
-                if (updateResult.changes === 0) throw new Error('Kein Datensatz aktualisiert. E-Mail: ' + session.user.email);
+                if (updateResult.changes === 0) throw new Error('Kein Datensatz aktualisiert. E-Mail: ' + session.user.email + ' | row: ' + JSON.stringify(row));
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Kündigung fehlgeschlagen: ' + err.message }), {
                     status: 500,
