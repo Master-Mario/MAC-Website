@@ -471,6 +471,7 @@ export default {
         await ensurePaymentSetupsTable(env);
         await ensureBillingHistoryTable(env);
         const serverKosten = parseFloat(env.SERVER_COSTS || '0');
+        const now = new Date();
         // Nur aktive Nutzer (registriert, nicht gekündigt oder Kündigung in der Zukunft)
         const rows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(now.toISOString()).all()).results || [];
         const nutzerAnzahl = rows.length > 0 ? rows.length : 1;
