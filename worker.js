@@ -415,6 +415,13 @@ export default {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+        // --- D1-API: Abo kündigen (GET-Request abfangen, verständliche Fehlermeldung) ---
+        if (path === '/api/d1/abo-kuendigen' && method === 'GET') {
+            return new Response(JSON.stringify({ error: 'Bitte verwende POST für diesen Endpoint.' }), {
+                status: 405,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
         // --- D1-API: Abo kündigen ---
         if (path === '/api/d1/abo-kuendigen' && method === 'POST') {
             await ensurePaymentSetupsTable(env);
