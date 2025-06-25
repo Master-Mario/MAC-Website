@@ -389,7 +389,7 @@ export default {
                 let zahltag;
                 if (billing_day) {
                     zahltag = new Date(jetzt.getFullYear(), jetzt.getMonth(), parseInt(billing_day, 10), 23, 59, 59, 999);
-                    if (jetzt.getDay() >= zahltag.getDay()){
+                    if (jetzt.getDate() >= zahltag.getDate()){
                         zahltag.setMonth(zahltag.getMonth() + 1);
                     }
                 } else {

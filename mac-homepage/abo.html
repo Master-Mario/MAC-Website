@@ -218,7 +218,7 @@
                     const dateObj = new Date(abo.next_pay);
                     if (!isNaN(dateObj.getTime())) {
                         const day = dateObj.getDate();
-                        const month = dateObj.getMonth();
+                        const month = dateObj.getMonth()+1;
                         const year = dateObj.getFullYear();
                         nextPayEl.textContent = `${day}.${month}.${year}`;
                     } else {
