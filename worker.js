@@ -492,7 +492,7 @@ export default {
                             customer: row.stripe_id,
                             off_session: 'true',
                             confirm: 'true',
-                            description: `Monatliche Serverkosten (MAC-SMP) für ${abrechnungsmonat}`
+                            description: `Monatliche Serverkosten (MAC-SMP) für ${now.getMonth()}`
                         }).toString()
                     });
                     const paymentIntent = await paymentIntentRes.json();
@@ -509,7 +509,7 @@ export default {
                 'INSERT INTO billing_history (email, abrechnungsmonat, nutzungszeit, kostenanteil, timestamp) VALUES (?, ?, ?, ?, ?)'
             ).bind(
                 row.email,
-                abrechnungsmonat,
+                now.getMonth(),
                 0, // nutzungszeit entfällt, immer 0
                 kostenanteil,
                 now.toISOString()
