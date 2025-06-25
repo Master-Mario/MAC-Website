@@ -426,35 +426,16 @@ export default {
             }
             // Kündigungsdatum auf nächsten Zahltag setzen
             try {
-                // Hole aktuellen Eintrag
-                const row = await env.DB.prepare('SELECT created_at FROM payment_setups WHERE email = ?').bind(session.user.email).first();
-                let createdAt = row?.created_at ? new Date(row.created_at) : null;
-                let now = new Date();
-                // Zahltag aus .env oder Monatsende
-                let zahltag;
-                if (env.BILLING_DAY) {
-                    // env.BILLING_DAY als Tag des Monats interpretieren (z.B. "28")
-                    const zahltagNum = parseInt(env.BILLING_DAY, 10);
-                    if (!isNaN(zahltagNum) && zahltagNum > 0 && zahltagNum <= 31) {
-                        // Prüfe, ob der Zahltag in diesem Monat noch kommt
-                        let thisMonthZahltag = new Date(now.getFullYear(), now.getMonth(), zahltagNum, 23, 59, 59, 999);
-                        if (now <= thisMonthZahltag) {
-                            zahltag = thisMonthZahltag;
-                        } else {
-                            // Nächster Monat
-                            zahltag = new Date(now.getFullYear(), now.getMonth() + 1, zahltagNum, 23, 59, 59, 999);
-                        }
-                    } else {
-                        // Fallback: Monatsende
-                        zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                    }
-                } else {
-                    zahltag = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                }
-                // Kündigung zum nächsten Zahltag
+                // Hole nächsten Zahltag aus /api/d1/abo-status
+                const paydayRes = await fetch(env.WEBSITE_URL + '/api/d1/abo-status', {
+                    headers: { 'Cookie': request.headers.get('Cookie') || '' }
+                });
+                const paydayData = await paydayRes.json();
+                const nextPay = paydayData.next_pay;
+                if (!nextPay) throw new Error('Konnte nächsten Zahltag nicht ermitteln');
                 await env.DB.prepare(
                     'UPDATE payment_setups SET canceled_at = ? WHERE email = ?'
-                ).bind(zahltag.toISOString(), session.user.email).run();
+                ).bind(nextPay, session.user.email).run();
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
                     status: 500,
