@@ -116,9 +116,15 @@ export default {
         if (path === '/api/auth/status') {
             headers.set('Content-Type', 'application/json');
             headers.set('Cache-Control', 'no-store');
+            let userWithGuthaben = session?.user || null;
+            if (userWithGuthaben && userWithGuthaben.email) {
+                await ensurePaymentSetupsTable(env);
+                const row = await env.DB.prepare('SELECT guthaben FROM payment_setups WHERE email = ?').bind(userWithGuthaben.email).first();
+                userWithGuthaben = { ...userWithGuthaben, guthaben: row?.guthaben ?? 0 };
+            }
             return new Response(JSON.stringify({
                 loggedIn: !!session?.user,
-                user: session?.user || null
+                user: userWithGuthaben
             }), { headers });
         }
 
