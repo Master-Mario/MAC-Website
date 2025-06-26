@@ -135,11 +135,17 @@ export default {
                         minecraft_uuid TEXT PRIMARY KEY,
                         email TEXT NOT NULL,
                         stripe_id TEXT NOT NULL,
+                        stripe_customer_id TEXT DEFAULT NULL,
                         payment_authorized BOOLEAN NOT NULL DEFAULT false,
                         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
                         canceled_at TEXT DEFAULT NULL
                     );
                 `).run();
+            } else {
+                // Falls Spalte stripe_customer_id fehlt, hinzufügen (Migration)
+                try {
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN stripe_customer_id TEXT DEFAULT NULL;").run();
+                } catch (e) { /* Spalte existiert evtl. schon */ }
             }
         }
 
@@ -261,12 +267,23 @@ export default {
                 });
             }
 
-            // Update payment_authorized und payment_method in der Datenbank
+            // Stripe-Session abfragen, um Customer-ID zu bekommen
+            let customerId = null;
+            try {
+                const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
+                    { headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` } });
+                const sessionData = await stripeRes.json();
+                if (stripeRes.ok && sessionData.customer) {
+                    customerId = sessionData.customer;
+                }
+            } catch (err) { /* Stripe-Fehler ignorieren, Customer-ID bleibt ggf. null */ }
+
+            // Update payment_authorized, payment_method und stripe_customer_id in der Datenbank
             try {
                 await env.DB.prepare(
-                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ? WHERE stripe_id = ?"
+                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_customer_id = ? WHERE stripe_id = ?"
                 )
-                    .bind(true, "stripe", sessionId)
+                    .bind(true, "stripe", customerId, sessionId)
                     .run();
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
@@ -498,7 +515,7 @@ export default {
         for (const row of rows) {
             // Stripe-Abbuchung, falls aktiviert und autorisiert
             try {
-                if (row.stripe_id && kostenanteil > 0) {
+                if (row.stripe_customer_id && kostenanteil > 0) {
                     const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
                         method: 'POST',
                         headers: {
@@ -508,7 +525,7 @@ export default {
                         body: new URLSearchParams({
                             amount: Math.round(kostenanteil * 100).toString(), // Betrag in Cent
                             currency: 'eur',
-                            customer: row.stripe_id,
+                            customer: row.stripe_customer_id,
                             off_session: 'true',
                             confirm: 'true',
                             description: `Monatliche Serverkosten (MAC-SMP) für ${now.getMonth()}`
@@ -550,11 +567,17 @@ async function ensurePaymentSetupsTable(env) {
                 minecraft_uuid TEXT PRIMARY KEY,
                 email TEXT NOT NULL,
                 stripe_id TEXT NOT NULL,
+                stripe_customer_id TEXT DEFAULT NULL,
                 payment_authorized BOOLEAN NOT NULL DEFAULT false,
                 created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
                 canceled_at TEXT DEFAULT NULL
             );
         `).run();
+    } else {
+        // Falls Spalte stripe_customer_id fehlt, hinzufügen (Migration)
+        try {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN stripe_customer_id TEXT DEFAULT NULL;").run();
+        } catch (e) { /* Spalte existiert evtl. schon */ }
     }
 }
 
