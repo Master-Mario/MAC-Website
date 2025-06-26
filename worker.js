@@ -595,6 +595,10 @@ export default {
                 kostenanteil,
                 now.toISOString()
             ).run();
+            // Entferne den Eintrag, wenn gekündigt
+            if (row.canceled_at && new Date(row.canceled_at) <= now.setDate(now.getDate() + 2)){
+                await env.DB.prepare('DELETE FROM payment_setups WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
+            }
         }
     }
 }
