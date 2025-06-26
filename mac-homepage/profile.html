@@ -78,46 +78,48 @@
         .guthaben-label {
             font-size: 1.18rem;
             font-weight: 600;
-            color: #232526;
+            color: #ff0023;
             margin-right: 0.7em;
             letter-spacing: 0.5px;
+            text-shadow: 0 2px 8px #fff, 0 1px 0 #fff;
         }
         .guthaben-badge {
             display: inline-flex;
             align-items: center;
             min-width: 90px;
-            background: linear-gradient(90deg, #ff375e 0%, #ff0023 100%);
+            background: linear-gradient(45deg, #ff0023, #ff4757);
             color: #fff;
             font-size: 1.55rem;
             font-weight: 800;
             border-radius: 40px;
             padding: 10px 30px 10px 22px;
-            box-shadow: 0 0 16px 2px #ff375e55, 0 2px 18px #ff002355;
+            box-shadow: 0 0 16px 2px #ff002355, 0 2px 18px #ff475755;
             letter-spacing: 1.5px;
             margin-right: 0.3em;
             border: 2.5px solid #fff;
             position: relative;
             transition: box-shadow 0.3s, transform 0.2s;
             animation: popIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
-            text-shadow: 0 2px 8px #ff375e99;
+            text-shadow: 0 2px 8px #ff002399, 0 1px 0 #fff;
         }
         .guthaben-badge.positive {
-            background: linear-gradient(90deg, #1db954 0%, #27e36a 100%);
+            background: linear-gradient(45deg, #1db954, #27e36a);
             box-shadow: 0 0 16px 2px #1db95455, 0 2px 18px #27e36a55;
             border-color: #fff;
-            text-shadow: 0 2px 8px #1db95499;
+            text-shadow: 0 2px 8px #1db95499, 0 1px 0 #fff;
         }
         .guthaben-badge.negative {
-            background: linear-gradient(90deg, #ff375e 0%, #ff0023 100%);
-            box-shadow: 0 0 16px 2px #ff375e99, 0 2px 18px #ff002399;
+            background: linear-gradient(45deg, #ff0023, #ff4757);
+            box-shadow: 0 0 16px 2px #ff002399, 0 2px 18px #ff475799;
             border-color: #fff;
-            text-shadow: 0 2px 8px #ff375e99;
+            text-shadow: 0 2px 8px #ff002399, 0 1px 0 #fff;
         }
         .guthaben-badge.zero {
-            background: linear-gradient(90deg, #444 0%, #232526 100%);
-            box-shadow: 0 0 16px 2px #23252655, 0 2px 18px #44444455;
+            background: linear-gradient(45deg, #aaa, #ddd);
+            box-shadow: 0 0 16px 2px #aaa8, 0 2px 18px #ddd8;
             border-color: #fff;
-            text-shadow: 0 2px 8px #23252699;
+            color: #232526;
+            text-shadow: 0 2px 8px #fff, 0 1px 0 #fff;
         }
         .guthaben-badge .guthaben-icon {
             display: inline-block;
@@ -126,15 +128,15 @@
             filter: drop-shadow(0 0 4px #fff8);
         }
         .guthaben-badge:hover {
-            box-shadow: 0 0 32px 6px #ff375e99, 0 2px 32px #ff002399;
+            box-shadow: 0 0 32px 6px #ff002399, 0 2px 32px #ff475799;
             transform: scale(1.04) rotate(-2deg);
         }
         .guthaben-euro {
             font-size: 1.18rem;
-            color: #ff375e;
+            color: #ff0023;
             font-weight: 700;
             margin-left: 0.1em;
-            text-shadow: 0 2px 8px #ff375e55;
+            text-shadow: 0 2px 8px #fff, 0 1px 0 #fff;
         }
         @keyframes popIn {
             0% { transform: scale(0.5); opacity: 0; }
