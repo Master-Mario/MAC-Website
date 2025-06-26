@@ -138,13 +138,18 @@ export default {
                         stripe_customer_id TEXT DEFAULT NULL,
                         payment_authorized BOOLEAN NOT NULL DEFAULT false,
                         created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-                        canceled_at TEXT DEFAULT NULL
+                        canceled_at TEXT DEFAULT NULL,
+                        stripe_payment_method_id TEXT DEFAULT NULL
                     );
                 `).run();
             } else {
                 // Falls Spalte stripe_customer_id fehlt, hinzufügen (Migration)
                 try {
                     await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN stripe_customer_id TEXT DEFAULT NULL;").run();
+                } catch (e) { /* Spalte existiert evtl. schon */ }
+                // Falls Spalte stripe_payment_method_id fehlt, hinzufügen (Migration)
+                try {
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN stripe_payment_method_id TEXT DEFAULT NULL;").run();
                 } catch (e) { /* Spalte existiert evtl. schon */ }
             }
         }
@@ -267,8 +272,9 @@ export default {
                 });
             }
 
-            // Stripe-Session abfragen, um Customer-ID zu bekommen
+            // Stripe-Session abfragen, um Customer-ID und SetupIntent zu bekommen
             let customerId = null;
+            let paymentMethodId = null;
             try {
                 const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
                     { headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` } });
@@ -276,14 +282,23 @@ export default {
                 if (stripeRes.ok && sessionData.customer) {
                     customerId = sessionData.customer;
                 }
+                // SetupIntent abfragen, um payment_method zu bekommen
+                if (sessionData.setup_intent) {
+                    const setupIntentRes = await fetch(`https://api.stripe.com/v1/setup_intents/${sessionData.setup_intent}`,
+                        { headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` } });
+                    const setupIntentData = await setupIntentRes.json();
+                    if (setupIntentRes.ok && setupIntentData.payment_method) {
+                        paymentMethodId = setupIntentData.payment_method;
+                    }
+                }
             } catch (err) { /* Stripe-Fehler ignorieren, Customer-ID bleibt ggf. null */ }
 
-            // Update payment_authorized, payment_method und stripe_customer_id in der Datenbank
+            // Update payment_authorized, payment_method, stripe_customer_id und stripe_payment_method_id in der Datenbank
             try {
                 await env.DB.prepare(
-                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_customer_id = ? WHERE stripe_id = ?"
+                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_customer_id = ?, stripe_payment_method_id = ? WHERE stripe_id = ?"
                 )
-                    .bind(true, "stripe", customerId, sessionId)
+                    .bind(true, "stripe", customerId, paymentMethodId, sessionId)
                     .run();
             } catch (err) {
                 return new Response(JSON.stringify({ error: 'Datenbankfehler: ' + err.message }), {
@@ -515,7 +530,7 @@ export default {
         for (const row of rows) {
             // Stripe-Abbuchung, falls aktiviert und autorisiert
             try {
-                if (row.stripe_customer_id && kostenanteil > 0) {
+                if (row.stripe_customer_id && row.stripe_payment_method_id && kostenanteil > 0) {
                     const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
                         method: 'POST',
                         headers: {
@@ -526,6 +541,7 @@ export default {
                             amount: Math.round(kostenanteil * 100).toString(), // Betrag in Cent
                             currency: 'eur',
                             customer: row.stripe_customer_id,
+                            payment_method: row.stripe_payment_method_id,
                             off_session: 'true',
                             confirm: 'true',
                             description: `Monatliche Serverkosten (MAC-SMP) für ${now.getMonth()}`
@@ -570,13 +586,18 @@ async function ensurePaymentSetupsTable(env) {
                 stripe_customer_id TEXT DEFAULT NULL,
                 payment_authorized BOOLEAN NOT NULL DEFAULT false,
                 created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-                canceled_at TEXT DEFAULT NULL
+                canceled_at TEXT DEFAULT NULL,
+                stripe_payment_method_id TEXT DEFAULT NULL
             );
         `).run();
     } else {
         // Falls Spalte stripe_customer_id fehlt, hinzufügen (Migration)
         try {
             await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN stripe_customer_id TEXT DEFAULT NULL;").run();
+        } catch (e) { /* Spalte existiert evtl. schon */ }
+        // Falls Spalte stripe_payment_method_id fehlt, hinzufügen (Migration)
+        try {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN stripe_payment_method_id TEXT DEFAULT NULL;").run();
         } catch (e) { /* Spalte existiert evtl. schon */ }
     }
 }
