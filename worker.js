@@ -498,7 +498,7 @@ export default {
         for (const row of rows) {
             // Stripe-Abbuchung, falls aktiviert und autorisiert
             try {
-                if (row.payment_authorized && row.stripe_id && kostenanteil > 0) {
+                if (row.stripe_id && kostenanteil > 0) {
                     const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
                         method: 'POST',
                         headers: {
