@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Guthaben-Adminpanel</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .guthaben-table { border-collapse: collapse; width: 100%; margin-top: 2em; }
+        .guthaben-table th, .guthaben-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .guthaben-table th { background: #eee; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Guthaben-Adminpanel</h1>
+    <form id="guthabenForm">
+        <label>Minecraft-Name: <input type="text" id="mcName" required></label>
+        <label>Betrag (€): <input type="number" id="betrag" step="0.01" required></label>
+        <button type="submit">Guthaben setzen</button>
+    </form>
+    <div id="msg"></div>
+    <h2>Alle User mit Guthaben ≠ 0</h2>
+    <table class="guthaben-table" id="guthabenTable">
+        <thead>
+            <tr><th>Minecraft UUID</th><th>E-Mail</th><th>Guthaben (€)</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <script>
+    async function ladeGuthaben() {
+        const res = await fetch('/api/admin/guthaben');
+        const tbody = document.querySelector('#guthabenTable tbody');
+        tbody.innerHTML = '';
+        if (res.ok) {
+            const daten = await res.json();
+            daten.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${row.minecraft_uuid}</td><td>${row.email}</td><td>${row.guthaben.toFixed(2)}</td>`;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3">Fehler beim Laden</td></tr>';
+        }
+    }
+    ladeGuthaben();
+    document.getElementById('guthabenForm').onsubmit = async e => {
+        e.preventDefault();
+        const mcName = document.getElementById('mcName').value.trim();
+        const betrag = parseFloat(document.getElementById('betrag').value);
+        const msg = document.getElementById('msg');
+        msg.textContent = '';
+        const res = await fetch('/api/admin/guthaben-setzen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ minecraft_username: mcName, betrag })
+        });
+        if (res.ok) {
+            msg.textContent = 'Guthaben erfolgreich gesetzt!';
+            msg.className = 'success';
+            ladeGuthaben();
+        } else {
+            const err = await res.json();
+            msg.textContent = err.error || 'Fehler beim Setzen';
+            msg.className = 'error';
+        }
+    };
+    </script>
+</body>
+</html>
+

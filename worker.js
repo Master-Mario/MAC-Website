@@ -151,6 +151,10 @@ export default {
                 try {
                     await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN stripe_payment_method_id TEXT DEFAULT NULL;").run();
                 } catch (e) { /* Spalte existiert evtl. schon */ }
+                // Migration: Spalte guthaben (REAL) hinzufügen, falls nicht vorhanden
+                try {
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN guthaben REAL DEFAULT 0;").run();
+                } catch (e) { /* Spalte existiert evtl. schon */ }
             }
         }
 
@@ -540,6 +544,135 @@ export default {
                 });
             }
         }
+        // --- ADMIN: Guthaben-Panel (nur für Discord-Admin) ---
+        // Listet alle User mit Guthaben ≠ 0
+        if (path === '/api/admin/guthaben' && method === 'GET') {
+            if (!session?.user?.id || session.user.id !== env.ADMIN_DISCORD_ID) {
+                return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            await ensurePaymentSetupsTable(env);
+            const rows = (await env.DB.prepare('SELECT minecraft_uuid, email, guthaben FROM payment_setups WHERE guthaben != 0').all()).results || [];
+            return new Response(JSON.stringify(rows), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+        // Setzt Guthaben für einen User (nur Admin)
+        if (path === '/api/admin/guthaben-setzen' && method === 'POST') {
+            if (!session?.user?.id || session.user.id !== env.ADMIN_DISCORD_ID) {
+                return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            await ensurePaymentSetupsTable(env);
+            let body;
+            try {
+                body = await request.json();
+            } catch {
+                return new Response(JSON.stringify({ error: 'Ungültiger Body' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            const { minecraft_username, betrag } = body;
+            if (!minecraft_username || typeof betrag !== 'number') {
+                return new Response(JSON.stringify({ error: 'minecraft_username und betrag (number) erforderlich' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Username -> UUID
+            let uuid = minecraft_username;
+            try {
+                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraft_username)}`);
+                if (playerdbRes.ok) {
+                    const playerdbData = await playerdbRes.json();
+                    if (playerdbData?.data?.player?.id) uuid = playerdbData.data.player.id;
+                }
+            } catch {}
+            // Update Guthaben
+            const update = await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE minecraft_uuid = ?').bind(betrag, uuid).run();
+            if (update.changes === 0) {
+                return new Response(JSON.stringify({ error: 'Kein User gefunden' }), {
+                    status: 404,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+        // Registrierung mit Guthaben (ohne Stripe)
+        if (path === '/api/register-guthaben' && method === 'POST') {
+            await ensurePaymentSetupsTable(env);
+            if (!session?.user?.email) {
+                return new Response(JSON.stringify({ error: 'Nicht eingeloggt' }), {
+                    status: 401,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            let body;
+            try {
+                body = await request.json();
+            } catch {
+                return new Response(JSON.stringify({ error: 'Ungültiger Body' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            const { minecraftUsername } = body;
+            if (!minecraftUsername) {
+                return new Response(JSON.stringify({ error: 'Minecraft-Username erforderlich' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // PlayerDB API: Username -> UUID
+            let minecraftUuid;
+            try {
+                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraftUsername)}`);
+                if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler");
+                const playerdbData = await playerdbRes.json();
+                minecraftUuid = playerdbData?.data?.player?.id;
+                if (!minecraftUuid) throw new Error("UUID nicht gefunden");
+            } catch (err) {
+                return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Prüfe, ob schon registriert
+            const existing = await env.DB.prepare("SELECT * FROM payment_setups WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, session.user.email).first();
+            if (existing && existing.payment_authorized) {
+                return new Response(JSON.stringify({ error: 'Du bist bereits registriert.' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Guthaben prüfen
+            const user = await env.DB.prepare("SELECT guthaben FROM payment_setups WHERE email = ?").bind(session.user.email).first();
+            if (!user || (user.guthaben || 0) <= 0) {
+                return new Response(JSON.stringify({ error: 'Nicht genug Guthaben. Bitte lade zuerst Guthaben auf.' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Registrierung durchführen (payment_authorized = 1, Stripe-Felder leer)
+            if (existing) {
+                await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = 1, canceled_at = NULL WHERE email = ?")
+                    .bind(minecraftUuid, session.user.email).run();
+            } else {
+                await env.DB.prepare(
+                    "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (?, ?, '', 1, ?, NULL, ?)"
+                ).bind(minecraftUuid, session.user.email, new Date().toISOString(), user.guthaben).run();
+            }
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
         // Fallback für nicht erkannte Routen mit 404 Weiterleitung
         return new Response(null, {
             status: 404,
@@ -586,12 +719,20 @@ export default {
                     console.error('Stripe PaymentIntent Exception:', err);
                 }
             }
+            // Guthaben abbuchen
+            let neuesGuthaben = (row.guthaben || 0) - kostenanteil;
+            let paymentAuthorized = row.payment_authorized;
+            if (neuesGuthaben < 0) {
+                paymentAuthorized = 0; // User sperren
+            }
             await env.DB.prepare(
-                'INSERT INTO billing_history (email, abrechnungsmonat, nutzungszeit, kostenanteil, timestamp) VALUES (?, ?, ?, ?, ?)'
+                'UPDATE payment_setups SET guthaben = ?, payment_authorized = ? WHERE minecraft_uuid = ?'
+            ).bind(neuesGuthaben, paymentAuthorized, row.minecraft_uuid).run();
+            await env.DB.prepare(
+                'INSERT INTO billing_history (email, abrechnungsmonat, kostenanteil, timestamp) VALUES (?, ?, ?, ?)'
             ).bind(
                 row.email,
                 now.getMonth(),
-                0, // nutzungszeit entfällt, immer 0
                 kostenanteil,
                 now.toISOString()
             ).run();
@@ -636,6 +777,10 @@ async function ensurePaymentSetupsTable(env) {
         // Falls Spalte stripe_payment_method_id fehlt, hinzufügen (Migration)
         try {
             await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN stripe_payment_method_id TEXT DEFAULT NULL;").run();
+        } catch (e) { /* Spalte existiert evtl. schon */ }
+        // Migration: Spalte guthaben (REAL) hinzufügen, falls nicht vorhanden
+        try {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN guthaben REAL DEFAULT 0;").run();
         } catch (e) { /* Spalte existiert evtl. schon */ }
     }
 }

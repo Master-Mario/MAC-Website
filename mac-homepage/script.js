@@ -216,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const minecraftUsername = document.getElementById('minecraftUsername').value;
             const agbChecked = document.getElementById('agb').checked;
+            const payWithGuthaben = document.getElementById('payWithGuthaben')?.checked;
 
             if (!agbChecked) {
                 paymentMessage.textContent = 'Bitte stimme den AGB und der Datenschutzerklärung zu.';
@@ -228,6 +229,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
+                if (payWithGuthaben) {
+                    // Registrierung mit Guthaben
+                    const response = await fetch('/api/register-guthaben', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ minecraftUsername })
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        paymentMessage.textContent = 'Erfolgreich mit Guthaben registriert! Du bist jetzt freigeschaltet.';
+                    } else {
+                        paymentMessage.textContent = data.error || 'Registrierung mit Guthaben fehlgeschlagen.';
+                    }
+                    return;
+                }
+
                 // 1. Create a checkout session on the server
                 const response = await fetch('/create-checkout-session', { // Sicherstellen, dass der Pfad korrekt ist
                     method: 'POST',
