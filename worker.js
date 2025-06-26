@@ -381,16 +381,44 @@ export default {
         // --- D1-API: Abo-Status anhand Discord-User (E-Mail) ausgeben ---
         if (path === '/api/d1/abo-status' && method === 'GET') {
             await ensurePaymentSetupsTable(env);
-            if (!session?.user?.email) {
-                return new Response(JSON.stringify({ error: 'Nicht eingeloggt oder keine E-Mail im Discord-Account' }), {
-                    status: 401,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+            const username = url.searchParams.get('username');
+            let row = null;
+            let email = null;
+            let minecraftUsername = null;
+            if (username) {
+                // Suche per Minecraft-Username (Plugin-API)
+                try {
+                    // PlayerDB API: Username -> UUID
+                    const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(username)}`);
+                    if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler");
+                    const playerdbData = await playerdbRes.json();
+                    const minecraftUuid = playerdbData?.data?.player?.id;
+                    if (!minecraftUuid) throw new Error("UUID nicht gefunden");
+                    // Suche nach passendem Eintrag in D1 über die UUID
+                    row = await env.DB.prepare(
+                        'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
+                    ).bind(minecraftUuid).first();
+                    minecraftUsername = username;
+                } catch (err) {
+                    return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler' }), {
+                        status: 400,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+            } else {
+                // Standard: Suche per Discord-Session/E-Mail
+                if (!session?.user?.email) {
+                    return new Response(JSON.stringify({ error: 'Nicht eingeloggt oder keine E-Mail im Discord-Account' }), {
+                        status: 401,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+                row = await env.DB.prepare(
+                    'SELECT * FROM payment_setups WHERE email = ?'
+                ).bind(session.user.email).first();
+                email = session.user.email;
+                minecraftUsername = row?.minecraft_uuid;
             }
-            // Suche nach passendem Eintrag in D1 über die E-Mail
-            const row = await env.DB.prepare(
-                'SELECT * FROM payment_setups WHERE email = ?'
-            ).bind(session.user.email).first();
             let billing_day_env = env.BILLING_DAY ? env.BILLING_DAY : null;
             if (!row) {
                 return new Response(JSON.stringify({ active: false, billing_day_env }), {
@@ -398,18 +426,19 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Hole Minecraft-Username von PlayerDB API
-            let minecraftUsername = row.minecraft_uuid;
-            try {
-                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${minecraftUsername}`);
-                if (playerdbRes.ok) {
-                    const playerdbData = await playerdbRes.json();
-                    if (playerdbData && playerdbData.data && playerdbData.data.player && playerdbData.data.player.username) {
-                        minecraftUsername = playerdbData.data.player.username;
+            // Hole Minecraft-Username von PlayerDB API (nur wenn nicht schon gesetzt)
+            if (minecraftUsername && (!username || minecraftUsername !== username)) {
+                try {
+                    const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${minecraftUsername}`);
+                    if (playerdbRes.ok) {
+                        const playerdbData = await playerdbRes.json();
+                        if (playerdbData && playerdbData.data && playerdbData.data.player && playerdbData.data.player.username) {
+                            minecraftUsername = playerdbData.data.player.username;
+                        }
                     }
+                } catch (err) {
+                    // Fallback: UUID anzeigen
                 }
-            } catch (err) {
-                // Fallback: UUID anzeigen
             }
             // amount: Serverkosten geteilt durch Anzahl aktiver Nutzer
             let amount = null;
