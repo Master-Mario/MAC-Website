@@ -596,8 +596,13 @@ export default {
                 now.toISOString()
             ).run();
             // Entferne den Eintrag, wenn gekündigt
-            if (row.canceled_at && new Date(row.canceled_at) <= now.setDate(now.getDate() + 2)){
-                await env.DB.prepare('DELETE FROM payment_setups WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
+            if (row.canceled_at) {
+                const canceledAt = new Date(row.canceled_at);
+                const nowDate = new Date(now); // Kopie, damit setDate keine Seiteneffekte hat
+                nowDate.setDate(nowDate.getDate() + 2);
+                if (canceledAt <= nowDate) {
+                    await env.DB.prepare('DELETE FROM payment_setups WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
+                }
             }
         }
     }
