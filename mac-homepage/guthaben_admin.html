@@ -5,28 +5,154 @@
     <title>Guthaben-Adminpanel</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .guthaben-table { border-collapse: collapse; width: 100%; margin-top: 2em; }
-        .guthaben-table th, .guthaben-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        .guthaben-table th { background: #eee; }
-        .success { color: green; }
-        .error { color: red; }
+        body {
+            background: linear-gradient(120deg, #232526 0%, #ff0023 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #222;
+        }
+        .admin-container {
+            max-width: 600px;
+            margin: 3em auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(255,0,35,0.13);
+            padding: 2.5em 2em 2em 2em;
+            animation: fadeInUp 1s;
+        }
+        h1 {
+            color: #ff0023;
+            text-align: center;
+            margin-bottom: 1.5em;
+            letter-spacing: 1px;
+        }
+        form#guthabenForm {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2em;
+            margin-bottom: 1.5em;
+        }
+        form#guthabenForm label {
+            font-weight: 500;
+            color: #222;
+        }
+        form#guthabenForm input {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 1.05em;
+            margin-left: 0.5em;
+            transition: border 0.2s;
+        }
+        form#guthabenForm input:focus {
+            border: 1.5px solid #ff0023;
+            outline: none;
+        }
+        button[type="submit"] {
+            background: linear-gradient(45deg, #ff0023, #ff4757);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 0;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(255,0,35,0.13);
+            transition: all 0.2s;
+        }
+        button[type="submit"]:hover {
+            background: #ff0023;
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 8px 32px rgba(255,0,35,0.18);
+        }
+        #msg {
+            min-height: 1.5em;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 1.5em;
+            font-size: 1.08em;
+        }
+        .success {
+            color: #1db954;
+            animation: popIn 0.5s;
+        }
+        .error {
+            color: #ff0023;
+            animation: shake 0.4s;
+        }
+        h2 {
+            color: #ff0023;
+            margin-top: 2.5em;
+            margin-bottom: 0.7em;
+            text-align: center;
+        }
+        .guthaben-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 1em;
+            background: #fafbfc;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(255,0,35,0.07);
+        }
+        .guthaben-table th, .guthaben-table td {
+            border: none;
+            padding: 13px 10px;
+            text-align: left;
+        }
+        .guthaben-table th {
+            background: #ff0023;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .guthaben-table tr:nth-child(even) {
+            background: #f6f6f6;
+        }
+        .guthaben-table tr:hover {
+            background: #ffe5ea;
+            transition: background 0.2s;
+        }
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+            100% { transform: translateX(0); }
+        }
+        @media (max-width: 700px) {
+            .admin-container { padding: 1.2em 0.5em; }
+            .guthaben-table th, .guthaben-table td { font-size: 0.98em; padding: 8px 4px; }
+        }
     </style>
 </head>
 <body>
-    <h1>Guthaben-Adminpanel</h1>
-    <form id="guthabenForm">
-        <label>Minecraft-Name: <input type="text" id="mcName" required></label>
-        <label>Betrag (€): <input type="number" id="betrag" step="0.01" required></label>
-        <button type="submit">Guthaben setzen</button>
-    </form>
-    <div id="msg"></div>
-    <h2>Alle User mit Guthaben ≠ 0</h2>
-    <table class="guthaben-table" id="guthabenTable">
-        <thead>
-            <tr><th>Minecraft UUID</th><th>E-Mail</th><th>Guthaben (€)</th></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div class="admin-container">
+        <h1>Guthaben-Adminpanel</h1>
+        <form id="guthabenForm">
+            <label>Minecraft-Name: <input type="text" id="mcName" required></label>
+            <label>Betrag (€): <input type="number" id="betrag" step="0.01" required></label>
+            <button type="submit">Guthaben setzen</button>
+        </form>
+        <div id="msg"></div>
+        <h2>Alle User mit Guthaben ≠ 0</h2>
+        <table class="guthaben-table" id="guthabenTable">
+            <thead>
+                <tr><th>Minecraft UUID</th><th>E-Mail</th><th>Guthaben (€)</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
     <script>
     async function ladeGuthaben() {
         const res = await fetch('/api/admin/guthaben');
@@ -34,9 +160,13 @@
         tbody.innerHTML = '';
         if (res.ok) {
             const daten = await res.json();
+            if (daten.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#888;">Keine User mit Guthaben</td></tr>';
+                return;
+            }
             daten.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${row.minecraft_uuid}</td><td>${row.email}</td><td>${row.guthaben.toFixed(2)}</td>`;
+                tr.innerHTML = `<td style="font-family:monospace;">${row.minecraft_uuid}</td><td>${row.email}</td><td style="color:${row.guthaben>0?'#1db954':'#ff0023'};font-weight:600;">${row.guthaben.toFixed(2).replace('.', ',')}</td>`;
                 tbody.appendChild(tr);
             });
         } else {
@@ -50,6 +180,7 @@
         const betrag = parseFloat(document.getElementById('betrag').value);
         const msg = document.getElementById('msg');
         msg.textContent = '';
+        msg.className = '';
         const res = await fetch('/api/admin/guthaben-setzen', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -60,12 +191,12 @@
             msg.className = 'success';
             ladeGuthaben();
         } else {
-            const err = await res.json();
-            msg.textContent = err.error || 'Fehler beim Setzen';
+            let err = 'Fehler beim Setzen';
+            try { err = (await res.json()).error || err; } catch {}
+            msg.textContent = err;
             msg.className = 'error';
         }
     };
     </script>
 </body>
 </html>
-

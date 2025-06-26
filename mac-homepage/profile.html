@@ -75,6 +75,31 @@
             transform: translateY(-2px) scale(1.04);
             box-shadow: 0 8px 32px rgba(255,71,87,0.25);
         }
+        .guthaben-label {
+            font-size: 1.15rem;
+            font-weight: 500;
+            color: #222;
+            margin-right: 0.5em;
+        }
+        .guthaben-badge {
+            display: inline-block;
+            min-width: 70px;
+            background: linear-gradient(45deg, #ff0023, #ff4757);
+            color: #fff;
+            font-size: 1.35rem;
+            font-weight: 700;
+            border-radius: 30px;
+            padding: 7px 22px;
+            box-shadow: 0 2px 12px rgba(255,0,35,0.13);
+            letter-spacing: 1px;
+            margin-right: 0.3em;
+            animation: popIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
+        }
+        .guthaben-euro {
+            font-size: 1.15rem;
+            color: #ff0023;
+            font-weight: 600;
+        }
         @keyframes popIn {
             0% { transform: scale(0.5); opacity: 0; }
             80% { transform: scale(1.1); opacity: 1; }
@@ -116,7 +141,9 @@
             <button id="logoutBtn" class="btn-logout">Abmelden</button>
         </div>
         <div id="guthaben-section" style="margin-top:2em;">
-            <span>Guthaben: <span id="guthabenBetrag">–</span> €</span>
+            <span class="guthaben-label">Guthaben:</span>
+            <span id="guthabenBetrag" class="guthaben-badge">–</span>
+            <span class="guthaben-euro">€</span>
         </div>
     </section>
     <footer>
@@ -141,6 +168,13 @@
             if (data.loggedIn && data.user) {
                 name.textContent = data.user.username;
                 guthabenBetrag.textContent = data.user.guthaben ? data.user.guthaben.toFixed(2).replace('.', ',') : '0,00';
+                if (data.user.guthaben > 0) {
+                    guthabenBetrag.style.background = 'linear-gradient(45deg, #1db954, #27e36a)';
+                } else if (data.user.guthaben < 0) {
+                    guthabenBetrag.style.background = 'linear-gradient(45deg, #ff0023, #ff4757)';
+                } else {
+                    guthabenBetrag.style.background = 'linear-gradient(45deg, #aaa, #ddd)';
+                }
                 if (data.user.id && data.user.avatar) {
                     avatar.src = `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`;
                 } else {
