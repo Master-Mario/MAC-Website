@@ -6,25 +6,27 @@
     <link rel="stylesheet" href="style.css">
     <style>
         body {
-            background: linear-gradient(120deg, #232526 0%, #ff0023 100%);
+            background: linear-gradient(120deg, #181a1b 0%, #232526 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Arial, sans-serif;
-            color: #222;
+            color: #f3f3f3;
         }
         .admin-container {
             max-width: 600px;
             margin: 3em auto;
-            background: #fff;
+            background: rgba(30,32,34,0.98);
             border-radius: 18px;
-            box-shadow: 0 8px 32px rgba(255,0,35,0.13);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
             padding: 2.5em 2em 2em 2em;
             animation: fadeInUp 1s;
+            border: 1.5px solid #232526;
         }
         h1 {
-            color: #ff0023;
+            color: #ff375e;
             text-align: center;
             margin-bottom: 1.5em;
             letter-spacing: 1px;
+            text-shadow: 0 2px 12px #181a1b;
         }
         form#guthabenForm {
             display: flex;
@@ -34,22 +36,25 @@
         }
         form#guthabenForm label {
             font-weight: 500;
-            color: #222;
+            color: #f3f3f3;
         }
         form#guthabenForm input {
             padding: 10px 14px;
             border-radius: 8px;
-            border: 1px solid #ddd;
+            border: 1.5px solid #232526;
+            background: #232526;
+            color: #fff;
             font-size: 1.05em;
             margin-left: 0.5em;
-            transition: border 0.2s;
+            transition: border 0.2s, box-shadow 0.2s;
         }
         form#guthabenForm input:focus {
-            border: 1.5px solid #ff0023;
+            border: 1.5px solid #ff375e;
             outline: none;
+            box-shadow: 0 0 0 2px #ff375e33;
         }
         button[type="submit"] {
-            background: linear-gradient(45deg, #ff0023, #ff4757);
+            background: linear-gradient(45deg, #ff375e, #ff0023);
             color: #fff;
             border: none;
             border-radius: 50px;
@@ -57,8 +62,9 @@
             font-size: 1.1em;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 4px 16px rgba(255,0,35,0.13);
+            box-shadow: 0 4px 16px rgba(255,55,94,0.13);
             transition: all 0.2s;
+            letter-spacing: 0.5px;
         }
         button[type="submit"]:hover {
             background: #ff0023;
@@ -77,23 +83,24 @@
             animation: popIn 0.5s;
         }
         .error {
-            color: #ff0023;
+            color: #ff375e;
             animation: shake 0.4s;
         }
         h2 {
-            color: #ff0023;
+            color: #ff375e;
             margin-top: 2.5em;
             margin-bottom: 0.7em;
             text-align: center;
+            text-shadow: 0 2px 12px #181a1b;
         }
         .guthaben-table {
             border-collapse: collapse;
             width: 100%;
             margin-top: 1em;
-            background: #fafbfc;
+            background: #232526;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 12px rgba(255,0,35,0.07);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.18);
         }
         .guthaben-table th, .guthaben-table td {
             border: none;
@@ -101,17 +108,55 @@
             text-align: left;
         }
         .guthaben-table th {
-            background: #ff0023;
+            background: #ff375e;
             color: #fff;
             font-weight: 600;
             letter-spacing: 0.5px;
         }
+        .guthaben-table td {
+            color: #f3f3f3;
+        }
         .guthaben-table tr:nth-child(even) {
-            background: #f6f6f6;
+            background: #232526;
+        }
+        .guthaben-table tr:nth-child(odd) {
+            background: #181a1b;
         }
         .guthaben-table tr:hover {
-            background: #ffe5ea;
+            background: #2e2e36;
             transition: background 0.2s;
+        }
+        .guthaben-badge {
+            display: inline-block;
+            min-width: 70px;
+            background: linear-gradient(90deg, #ff375e 0%, #ff0023 100%);
+            color: #fff;
+            font-size: 1.15em;
+            font-weight: 700;
+            border-radius: 30px;
+            padding: 6px 18px;
+            box-shadow: 0 2px 12px rgba(255,55,94,0.13);
+            letter-spacing: 1px;
+            margin-right: 0.3em;
+            animation: popIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
+            border: 2px solid #ff375e;
+        }
+        .guthaben-badge.positive {
+            background: linear-gradient(90deg, #1db954 0%, #27e36a 100%);
+            border-color: #1db954;
+        }
+        .guthaben-badge.negative {
+            background: linear-gradient(90deg, #ff375e 0%, #ff0023 100%);
+            border-color: #ff375e;
+        }
+        .guthaben-badge.zero {
+            background: linear-gradient(90deg, #444 0%, #232526 100%);
+            border-color: #444;
+        }
+        .guthaben-euro {
+            font-size: 1.05em;
+            color: #ff375e;
+            font-weight: 600;
         }
         @keyframes fadeInUp {
             0% { opacity: 0; transform: translateY(30px); }
@@ -166,7 +211,10 @@
             }
             daten.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td style="font-family:monospace;">${row.minecraft_uuid}</td><td>${row.email}</td><td style="color:${row.guthaben>0?'#1db954':'#ff0023'};font-weight:600;">${row.guthaben.toFixed(2).replace('.', ',')}</td>`;
+                let badgeClass = 'guthaben-badge zero';
+                if (row.guthaben > 0) badgeClass = 'guthaben-badge positive';
+                else if (row.guthaben < 0) badgeClass = 'guthaben-badge negative';
+                tr.innerHTML = `<td style="font-family:monospace;">${row.minecraft_uuid}</td><td>${row.email}</td><td><span class='${badgeClass}'>${row.guthaben.toFixed(2).replace('.', ',')}</span> <span class='guthaben-euro'>€</span></td>`;
                 tbody.appendChild(tr);
             });
         } else {

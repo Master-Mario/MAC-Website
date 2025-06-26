@@ -76,29 +76,65 @@
             box-shadow: 0 8px 32px rgba(255,71,87,0.25);
         }
         .guthaben-label {
-            font-size: 1.15rem;
-            font-weight: 500;
-            color: #222;
-            margin-right: 0.5em;
+            font-size: 1.18rem;
+            font-weight: 600;
+            color: #232526;
+            margin-right: 0.7em;
+            letter-spacing: 0.5px;
         }
         .guthaben-badge {
-            display: inline-block;
-            min-width: 70px;
-            background: linear-gradient(45deg, #ff0023, #ff4757);
+            display: inline-flex;
+            align-items: center;
+            min-width: 90px;
+            background: linear-gradient(90deg, #ff375e 0%, #ff0023 100%);
             color: #fff;
-            font-size: 1.35rem;
-            font-weight: 700;
-            border-radius: 30px;
-            padding: 7px 22px;
-            box-shadow: 0 2px 12px rgba(255,0,35,0.13);
-            letter-spacing: 1px;
+            font-size: 1.55rem;
+            font-weight: 800;
+            border-radius: 40px;
+            padding: 10px 30px 10px 22px;
+            box-shadow: 0 0 16px 2px #ff375e55, 0 2px 18px #ff002355;
+            letter-spacing: 1.5px;
             margin-right: 0.3em;
+            border: 2.5px solid #fff;
+            position: relative;
+            transition: box-shadow 0.3s, transform 0.2s;
             animation: popIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
+            text-shadow: 0 2px 8px #ff375e99;
+        }
+        .guthaben-badge.positive {
+            background: linear-gradient(90deg, #1db954 0%, #27e36a 100%);
+            box-shadow: 0 0 16px 2px #1db95455, 0 2px 18px #27e36a55;
+            border-color: #fff;
+            text-shadow: 0 2px 8px #1db95499;
+        }
+        .guthaben-badge.negative {
+            background: linear-gradient(90deg, #ff375e 0%, #ff0023 100%);
+            box-shadow: 0 0 16px 2px #ff375e99, 0 2px 18px #ff002399;
+            border-color: #fff;
+            text-shadow: 0 2px 8px #ff375e99;
+        }
+        .guthaben-badge.zero {
+            background: linear-gradient(90deg, #444 0%, #232526 100%);
+            box-shadow: 0 0 16px 2px #23252655, 0 2px 18px #44444455;
+            border-color: #fff;
+            text-shadow: 0 2px 8px #23252699;
+        }
+        .guthaben-badge .guthaben-icon {
+            display: inline-block;
+            margin-right: 0.7em;
+            font-size: 1.25em;
+            filter: drop-shadow(0 0 4px #fff8);
+        }
+        .guthaben-badge:hover {
+            box-shadow: 0 0 32px 6px #ff375e99, 0 2px 32px #ff002399;
+            transform: scale(1.04) rotate(-2deg);
         }
         .guthaben-euro {
-            font-size: 1.15rem;
-            color: #ff0023;
-            font-weight: 600;
+            font-size: 1.18rem;
+            color: #ff375e;
+            font-weight: 700;
+            margin-left: 0.1em;
+            text-shadow: 0 2px 8px #ff375e55;
         }
         @keyframes popIn {
             0% { transform: scale(0.5); opacity: 0; }
@@ -142,7 +178,7 @@
         </div>
         <div id="guthaben-section" style="margin-top:2em;">
             <span class="guthaben-label">Guthaben:</span>
-            <span id="guthabenBetrag" class="guthaben-badge">–</span>
+            <span id="guthabenBetrag" class="guthaben-badge"><span class="guthaben-icon">💰</span>–</span>
             <span class="guthaben-euro">€</span>
         </div>
     </section>
@@ -167,13 +203,16 @@
             const data = await res.json();
             if (data.loggedIn && data.user) {
                 name.textContent = data.user.username;
-                guthabenBetrag.textContent = data.user.guthaben ? data.user.guthaben.toFixed(2).replace('.', ',') : '0,00';
+                let betrag = data.user.guthaben ? data.user.guthaben.toFixed(2).replace('.', ',') : '0,00';
+                let badge = guthabenBetrag;
+                badge.innerHTML = '<span class="guthaben-icon">💰</span>' + betrag;
+                badge.classList.remove('positive', 'negative', 'zero');
                 if (data.user.guthaben > 0) {
-                    guthabenBetrag.style.background = 'linear-gradient(45deg, #1db954, #27e36a)';
+                    badge.classList.add('positive');
                 } else if (data.user.guthaben < 0) {
-                    guthabenBetrag.style.background = 'linear-gradient(45deg, #ff0023, #ff4757)';
+                    badge.classList.add('negative');
                 } else {
-                    guthabenBetrag.style.background = 'linear-gradient(45deg, #aaa, #ddd)';
+                    badge.classList.add('zero');
                 }
                 if (data.user.id && data.user.avatar) {
                     avatar.src = `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`;
