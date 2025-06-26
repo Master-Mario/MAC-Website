@@ -115,6 +115,9 @@
             <a href="abo.html" class="profile-link">Zu meinen Abos</a>
             <button id="logoutBtn" class="btn-logout">Abmelden</button>
         </div>
+        <div id="guthaben-section" style="margin-top:2em;">
+            <span>Guthaben: <span id="guthabenBetrag">–</span> €</span>
+        </div>
     </section>
     <footer>
         <div class="footer-links">
@@ -131,11 +134,13 @@
         const avatar = document.getElementById('profileAvatar');
         const name = document.getElementById('profileName');
         const logoutBtn = document.getElementById('logoutBtn');
+        const guthabenBetrag = document.getElementById('guthabenBetrag');
         try {
             const res = await fetch('/api/auth/status', { credentials: 'include' });
             const data = await res.json();
             if (data.loggedIn && data.user) {
                 name.textContent = data.user.username;
+                guthabenBetrag.textContent = data.user.guthaben ? data.user.guthaben.toFixed(2).replace('.', ',') : '0,00';
                 if (data.user.id && data.user.avatar) {
                     avatar.src = `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`;
                 } else {
@@ -155,4 +160,3 @@
     </script>
 </body>
 </html>
-
