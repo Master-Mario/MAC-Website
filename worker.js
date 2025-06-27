@@ -473,7 +473,7 @@ export default {
                 }
                 next_pay = zahltag ? zahltag.toISOString() : null;
                 // Anzahl aktiver Nutzer (payment_authorized = 1, nicht gekündigt oder Kündigung in der Zukunft)
-                const nutzerRows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(jetzt.toISOString()).all()).results || [];
+                const nutzerRows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND active = 1 AND (canceled_at IS NULL)')).results || [];
                 const nutzerAnzahl = nutzerRows.length > 0 ? nutzerRows.length : 1;
                 amount = serverKosten / nutzerAnzahl;
             }
