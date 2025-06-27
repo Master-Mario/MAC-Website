@@ -241,8 +241,8 @@ export default {
                     // Prüfe, ob es einen bestehenden Eintrag mit dieser UUID oder E-Mail gibt
                     const existing = await env.DB.prepare("SELECT * FROM payment_setups WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, email).first();
                     if (existing) {
-                        // Wenn gekündigt, reaktiviere bestehenden Eintrag (statt INSERT)
-                        if (existing.canceled_at) {
+                        // Wenn gekündigt oder inaktiv, reaktiviere bestehenden Eintrag (statt INSERT)
+                        if (existing.canceled_at || existing.active === 0) {
                             await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 0, stripe_id = ?, created_at = ?, canceled_at = NULL WHERE minecraft_uuid = ? OR email = ?")
                                 .bind(session.id, new Date().toISOString(), minecraftUuid, email)
                                 .run();
@@ -658,7 +658,7 @@ export default {
             }
             // Prüfe, ob schon registriert
             const existing = await env.DB.prepare("SELECT * FROM payment_setups WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, session.user.email).first();
-            if (existing && existing.payment_authorized) {
+            if (existing && existing.payment_authorized && existing.active === 1) {
                 return new Response(JSON.stringify({ error: 'Du bist bereits registriert.' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
