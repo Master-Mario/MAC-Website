@@ -182,6 +182,18 @@ export default {
             `).run();
         }
 
+        // Hilfsfunktion: Stellt sicher, dass die Tabelle guthaben_codes existiert
+        async function ensureGuthabenCodesTable(env) {
+            await env.DB.prepare(`
+                CREATE TABLE IF NOT EXISTS guthaben_codes (
+                    code TEXT PRIMARY KEY,
+                    betrag REAL NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+                    created_by TEXT NOT NULL
+                );
+            `).run();
+        }
+
         // Vorheriger Endpunkt: /create-checkout-session
         // ...existing code for /create-checkout-session wurde entfernt oder kommentiert...
 
@@ -570,6 +582,130 @@ export default {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+
+        // --- ADMIN: Guthabencodes verwalten ---
+        // Erstellt einen neuen Code (nur Admin)
+        if (path === '/api/admin/code-erstellen' && method === 'POST') {
+            if (!session?.user?.id || session.user.id !== env.ADMIN_DISCORD_ID) {
+                return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            await ensureGuthabenCodesTable(env);
+
+            try {
+                const body = await request.json();
+                const { betrag } = body;
+
+                if (typeof betrag !== 'number' || betrag <= 0) {
+                    return new Response(JSON.stringify({ error: 'Betrag muss eine positive Zahl sein' }), {
+                        status: 400,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+
+                const code = await this.createGuthabenCode(env, session.user.id, betrag);
+
+                return new Response(JSON.stringify({
+                    success: true,
+                    code,
+                    betrag
+                }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (err) {
+                return new Response(JSON.stringify({ error: err.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
+        // Listet alle vorhandenen Codes (nur Admin)
+        if (path === '/api/admin/codes' && method === 'GET') {
+            if (!session?.user?.id || session.user.id !== env.ADMIN_DISCORD_ID) {
+                return new Response(JSON.stringify({ error: 'Nicht autorisiert' }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            await ensureGuthabenCodesTable(env);
+
+            const codes = await env.DB.prepare('SELECT code, betrag, created_at FROM guthaben_codes ORDER BY created_at DESC').all();
+
+            return new Response(JSON.stringify(codes.results || []), {
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // --- USER: Code einlösen ---
+        if (path === '/api/code-einloesen' && method === 'POST') {
+            if (!session?.user?.email) {
+                return new Response(JSON.stringify({ error: 'Nicht eingeloggt' }), {
+                    status: 401,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            await ensurePaymentSetupsTable(env);
+            await ensureGuthabenCodesTable(env);
+
+            try {
+                const body = await request.json();
+                const { code } = body;
+
+                if (!code) {
+                    return new Response(JSON.stringify({ error: 'Code erforderlich' }), {
+                        status: 400,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+
+                // Prüfe, ob Code existiert
+                const codeEntry = await env.DB.prepare('SELECT * FROM guthaben_codes WHERE code = ?').bind(code).first();
+
+                if (!codeEntry) {
+                    return new Response(JSON.stringify({ error: 'Ungültiger Code' }), {
+                        status: 400,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+
+                // Guthaben erhöhen
+                const currentUser = await env.DB.prepare('SELECT * FROM payment_setups WHERE email = ?').bind(session.user.email).first();
+                let currentGuthaben = 0;
+
+                if (currentUser) {
+                    // Bestehenden Nutzer aktualisieren
+                    currentGuthaben = currentUser.guthaben || 0;
+                    await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE email = ?')
+                        .bind(currentGuthaben + codeEntry.betrag, session.user.email).run();
+                } else {
+                    // Neuen Nutzer anlegen
+                    await env.DB.prepare(
+                        'INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, guthaben) VALUES (NULL, ?, \'\', 0, ?, ?)'
+                    ).bind(session.user.email, new Date().toISOString(), codeEntry.betrag).run();
+                }
+
+                // Code aus Datenbank löschen (wurde eingelöst)
+                await env.DB.prepare('DELETE FROM guthaben_codes WHERE code = ?').bind(code).run();
+
+                return new Response(JSON.stringify({
+                    success: true,
+                    betrag: codeEntry.betrag,
+                    neuesGuthaben: currentGuthaben + codeEntry.betrag
+                }), {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (err) {
+                return new Response(JSON.stringify({ error: err.message }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
         // Setzt Guthaben für einen User (nur Admin)
         if (path === '/api/admin/guthaben-setzen' && method === 'POST') {
             if (!session?.user?.id || session.user.id !== env.ADMIN_DISCORD_ID) {
@@ -691,6 +827,31 @@ export default {
             headers: { 'Location': env.WEBSITE_URL + '/error-pages/404.html', ...headers }
         });
     },
+
+    // --- ADMIN: Guthabencodes erstellen (nur für Discord-Admin) ---
+    async createGuthabenCode(env, adminId, betrag) {
+        await ensureGuthabenCodesTable(env);
+
+        // Prüfung, ob User Admin ist
+        if (!adminId || adminId !== env.ADMIN_DISCORD_ID) {
+            throw new Error('Nicht autorisiert');
+        }
+
+        // Zufälligen Code generieren (6 Zeichen, Großbuchstaben und Zahlen)
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // ohne I, O, 0, 1 (leicht zu verwechseln)
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+
+        // Code in Datenbank speichern
+        await env.DB.prepare(
+            'INSERT INTO guthaben_codes (code, betrag, created_by) VALUES (?, ?, ?)'
+        ).bind(code, betrag, adminId).run();
+
+        return code;
+    },
+
     // Führt die monatliche Abrechnung durch
     async runMonthlyBilling(env) {
         await ensurePaymentSetupsTable(env);
@@ -867,6 +1028,18 @@ async function ensureBillingHistoryTable(env) {
             kostenanteil REAL NOT NULL,
             timestamp TEXT NOT NULL,
             nutzungszeit INTEGER NOT NULL DEFAULT 1
+        );
+    `).run();
+}
+
+// Hilfsfunktion: Stellt sicher, dass die Tabelle guthaben_codes existiert
+async function ensureGuthabenCodesTable(env) {
+    await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS guthaben_codes (
+            code TEXT PRIMARY KEY,
+            betrag REAL NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            created_by TEXT NOT NULL
         );
     `).run();
 }
