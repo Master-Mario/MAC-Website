@@ -161,6 +161,10 @@ export default {
                 try {
                     await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN guthaben REAL DEFAULT 0;").run();
                 } catch (e) { /* Spalte existiert evtl. schon */ }
+                // Migration: Spalte active (BOOLEAN) hinzufügen, falls nicht vorhanden
+                try {
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN active BOOLEAN DEFAULT 0;").run();
+                } catch (e) { /* Spalte existiert evtl. schon */ }
             }
         }
 
@@ -306,7 +310,7 @@ export default {
             // Update payment_authorized, payment_method, stripe_customer_id und stripe_payment_method_id in der Datenbank
             try {
                 await env.DB.prepare(
-                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_customer_id = ?, stripe_payment_method_id = ? WHERE stripe_id = ?"
+                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_customer_id = ?, stripe_payment_method_id = ?, active = 1 WHERE stripe_id = ?"
                 )
                     .bind(true, "stripe", customerId, paymentMethodId, sessionId)
                     .run();
@@ -599,15 +603,27 @@ export default {
                     if (playerdbData?.data?.player?.id) uuid = playerdbData.data.player.id;
                 }
             } catch {}
-            // Update Guthaben
-            const update = await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE minecraft_uuid = ?').bind(betrag, uuid).run();
-            if (update.changes === 0) {
-                return new Response(JSON.stringify({ error: 'Kein User gefunden' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+            // Update Guthaben oder neuen User anlegen
+            const existing = await env.DB.prepare('SELECT * FROM payment_setups WHERE minecraft_uuid = ?').bind(uuid).first();
+            let active = false;
+            if (existing) {
+                const update = await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE minecraft_uuid = ?').bind(betrag, uuid).run();
+                if (update.changes === 0) {
+                    return new Response(JSON.stringify({ error: 'Kein User gefunden' }), {
+                        status: 404,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+                // Prüfe, ob der User auf den Server darf
+                active = !!existing.payment_authorized && (!existing.canceled_at || new Date(existing.canceled_at) > new Date());
+            } else {
+                // Neuen User mit Guthaben anlegen (payment_authorized = 0)
+                await env.DB.prepare(
+                    'INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (?, ?, \'\', 0, ?, NULL, ?)'
+                ).bind(uuid, '', new Date().toISOString(), betrag).run();
+                active = false;
             }
-            return new Response(JSON.stringify({ success: true }), {
+            return new Response(JSON.stringify({ success: true, active }), {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
@@ -668,11 +684,11 @@ export default {
             }
             // Registrierung durchführen (payment_authorized = 1, Stripe-Felder leer)
             if (existing) {
-                await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = 1, canceled_at = NULL WHERE email = ?")
+                await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = 1, canceled_at = NULL, active = 1 WHERE email = ?")
                     .bind(minecraftUuid, session.user.email).run();
             } else {
                 await env.DB.prepare(
-                    "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (?, ?, '', 1, ?, NULL, ?)"
+                    "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben, active) VALUES (?, ?, '', 1, ?, NULL, ?, 1)"
                 ).bind(minecraftUuid, session.user.email, new Date().toISOString(), user.guthaben).run();
             }
             return new Response(JSON.stringify({ success: true }), {
@@ -728,12 +744,14 @@ export default {
             // Guthaben abbuchen
             let neuesGuthaben = (row.guthaben || 0) - kostenanteil;
             let paymentAuthorized = row.payment_authorized;
+            let active = row.active;
             if (neuesGuthaben < 0) {
                 paymentAuthorized = 0; // User sperren
+                active = 0;
             }
             await env.DB.prepare(
-                'UPDATE payment_setups SET guthaben = ?, payment_authorized = ? WHERE minecraft_uuid = ?'
-            ).bind(neuesGuthaben, paymentAuthorized, row.minecraft_uuid).run();
+                'UPDATE payment_setups SET guthaben = ?, payment_authorized = ?, active = ? WHERE minecraft_uuid = ?'
+            ).bind(neuesGuthaben, paymentAuthorized, active, row.minecraft_uuid).run();
             await env.DB.prepare(
                 'INSERT INTO billing_history (email, abrechnungsmonat, kostenanteil, timestamp) VALUES (?, ?, ?, ?)'
             ).bind(
@@ -742,13 +760,13 @@ export default {
                 kostenanteil,
                 now.toISOString()
             ).run();
-            // Entferne den Eintrag, wenn gekündigt
+            // Setze am Ende des Monats active auf false, statt zu löschen
             if (row.canceled_at) {
                 const canceledAt = new Date(row.canceled_at);
                 const nowDate = new Date(now); // Kopie, damit setDate keine Seiteneffekte hat
                 nowDate.setDate(nowDate.getDate() + 2);
                 if (canceledAt <= nowDate) {
-                    await env.DB.prepare('DELETE FROM payment_setups WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
+                    await env.DB.prepare('UPDATE payment_setups SET active = 0 WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
                 }
             }
         }
@@ -787,6 +805,10 @@ async function ensurePaymentSetupsTable(env) {
         // Migration: Spalte guthaben (REAL) hinzufügen, falls nicht vorhanden
         try {
             await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN guthaben REAL DEFAULT 0;").run();
+        } catch (e) { /* Spalte existiert evtl. schon */ }
+        // Migration: Spalte active (BOOLEAN) hinzufügen, falls nicht vorhanden
+        try {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN active BOOLEAN DEFAULT 0;").run();
         } catch (e) { /* Spalte existiert evtl. schon */ }
     }
 }
