@@ -514,28 +514,28 @@ footer {
 }
 
 
-.registration-form .agb-checkbox {
+.registration-form .checkbox {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-.registration-form .agb-checkbox .checkbox input[type="checkbox"] {
+.registration-form .checkbox input[type="checkbox"] {
     width: auto;
     accent-color: #ff0023;
 }
 
-.registration-form .agb-checkbox label {
+.registration-form .checkbox label {
     margin-bottom: 0;
     font-size: 0.9rem;
 }
 
-.registration-form .agb-checkbox a {
+.registration-form .checkbox a {
     color: #ff0023;
     text-decoration: none;
 }
 
-.registration-form .agb-checkbox a:hover {
+.registration-form .checkbox a:hover {
     text-decoration: underline;
 }
 
