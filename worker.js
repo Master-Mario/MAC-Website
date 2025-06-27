@@ -776,37 +776,35 @@ export default {
                 const canceledAt = new Date(row.canceled_at);
                 const nowDate = new Date(now); // Kopie, damit setDate keine Seiteneffekte hat
                 nowDate.setDate(nowDate.getDate() + 2);
-                if (canceledAt <= nowDate) {
-                    // Bei Kündigung active auf 0 setzen und canceled_at auf null zurücksetzen
-                    await env.DB.prepare('UPDATE payment_setups SET active = 0, canceled_at = NULL WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
+                // Bei Kündigung active auf 0 setzen und canceled_at auf null zurücksetzen
+                await env.DB.prepare('UPDATE payment_setups SET active = 0, canceled_at = NULL WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
 
-                    // Wenn ein Stripe-Kunde existiert, diesen auch aus Stripe löschen
-                    if (row.stripe_customer_id) {
-                        try {
-                            const deleteRes = await fetch(`https://api.stripe.com/v1/customers/${row.stripe_customer_id}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
-                                }
-                            });
-
-                            if (deleteRes.ok) {
-                                // Stripe-Kundendaten aus der Datenbank entfernen
-                                await env.DB.prepare(
-                                    'UPDATE payment_setups SET stripe_customer_id = NULL, stripe_payment_method_id = NULL WHERE minecraft_uuid = ?'
-                                ).bind(row.minecraft_uuid).run();
-
-                                if (env.LOG_ERRORS) {
-                                    console.log(`Stripe-Kunde ${row.stripe_customer_id} für ${row.email} wurde gelöscht`);
-                                }
-                            } else if (env.LOG_ERRORS) {
-                                const errorData = await deleteRes.json();
-                                console.error('Stripe Customer Delete Fehler:', errorData.error ? errorData.error.message : 'Unbekannter Fehler');
+                // Wenn ein Stripe-Kunde existiert, diesen auch aus Stripe löschen
+                if (row.stripe_customer_id) {
+                    try {
+                        const deleteRes = await fetch(`https://api.stripe.com/v1/customers/${row.stripe_customer_id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
                             }
-                        } catch (err) {
+                        });
+
+                        if (deleteRes.ok) {
+                            // Stripe-Kundendaten aus der Datenbank entfernen
+                            await env.DB.prepare(
+                                'UPDATE payment_setups SET stripe_customer_id = NULL, stripe_payment_method_id = NULL WHERE minecraft_uuid = ?'
+                            ).bind(row.minecraft_uuid).run();
+
                             if (env.LOG_ERRORS) {
-                                console.error('Stripe Customer Delete Exception:', err);
+                                console.log(`Stripe-Kunde ${row.stripe_customer_id} für ${row.email} wurde gelöscht`);
                             }
+                        } else if (env.LOG_ERRORS) {
+                            const errorData = await deleteRes.json();
+                            console.error('Stripe Customer Delete Fehler:', errorData.error ? errorData.error.message : 'Unbekannter Fehler');
+                        }
+                    } catch (err) {
+                        if (env.LOG_ERRORS) {
+                            console.error('Stripe Customer Delete Exception:', err);
                         }
                     }
                 }
