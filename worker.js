@@ -594,33 +594,22 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Username -> UUID
-            let uuid = email;
-            try {
-                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(email)}`);
-                if (playerdbRes.ok) {
-                    const playerdbData = await playerdbRes.json();
-                    if (playerdbData?.data?.player?.id) uuid = playerdbData.data.player.id;
-                }
-            } catch {}
             // Update Guthaben oder neuen User anlegen
-            const existing = await env.DB.prepare('SELECT * FROM payment_setups WHERE minecraft_uuid = ?').bind(uuid).first();
+            const existing = await env.DB.prepare('SELECT * FROM payment_setups WHERE email = ?').bind(email).first();
             let active = false;
             if (existing) {
-                const update = await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE minecraft_uuid = ?').bind(betrag, uuid).run();
+                const update = await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE email = ?').bind(betrag, email).run();
                 if (update.changes === 0) {
                     return new Response(JSON.stringify({ error: 'Kein User gefunden' }), {
                         status: 404,
                         headers: { 'Content-Type': 'application/json' }
                     });
                 }
-                // Prüfe, ob der User auf den Server darf
-                active = !!existing.payment_authorized && (!existing.canceled_at || new Date(existing.canceled_at) > new Date());
             } else {
                 // Neuen User mit Guthaben anlegen (payment_authorized = 0)
                 await env.DB.prepare(
-                    'INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (?, ?, \'\', 0, ?, NULL, ?)'
-                ).bind(uuid, '', new Date().toISOString(), betrag).run();
+                    'INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (NULL, ?, \'\', 0, ?, NULL, ?)'
+                ).bind(email, new Date().toISOString(), betrag).run();
                 active = false;
             }
             return new Response(JSON.stringify({ success: true, active }), {
