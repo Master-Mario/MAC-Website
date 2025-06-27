@@ -777,7 +777,8 @@ export default {
                 const nowDate = new Date(now); // Kopie, damit setDate keine Seiteneffekte hat
                 nowDate.setDate(nowDate.getDate() + 2);
                 if (canceledAt <= nowDate) {
-                    await env.DB.prepare('UPDATE payment_setups SET active = 0 WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
+                    // Bei Kündigung active auf 0 setzen und canceled_at auf null zurücksetzen
+                    await env.DB.prepare('UPDATE payment_setups SET active = 0, canceled_at = NULL WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
 
                     // Wenn ein Stripe-Kunde existiert, diesen auch aus Stripe löschen
                     if (row.stripe_customer_id) {
