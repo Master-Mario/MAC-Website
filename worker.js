@@ -600,12 +600,23 @@ export default {
                 }
             } catch {}
             // Update Guthaben
-            const update = await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE minecraft_uuid = ?').bind(betrag, uuid).run();
+            let update = await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE minecraft_uuid = ?').bind(betrag, uuid).run();
             if (update.changes === 0) {
-                return new Response(JSON.stringify({ error: 'Kein User gefunden' }), {
-                    status: 404,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                // Kein Eintrag mit minecraft_uuid, prüfe ob E-Mail im Body vorhanden ist
+                const { email } = body;
+                if (!email) {
+                    return new Response(JSON.stringify({ error: 'Kein User gefunden. Bitte gib eine E-Mail an, falls der User noch nicht registriert ist.' }), {
+                        status: 404,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+                // Versuche Update per E-Mail
+                update = await env.DB.prepare('UPDATE payment_setups SET guthaben = ? WHERE email = ?').bind(betrag, email).run();
+                if (update.changes === 0) {
+                    // Kein Eintrag vorhanden, lege neuen an (nur mit E-Mail und Guthaben)
+                    await env.DB.prepare('INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                        .bind('', email, '', 0, new Date().toISOString(), null, betrag).run();
+                }
             }
             return new Response(JSON.stringify({ success: true }), {
                 headers: { 'Content-Type': 'application/json' }
@@ -651,7 +662,7 @@ export default {
                 });
             }
             // Prüfe, ob schon registriert
-            const existing = await env.DB.prepare("SELECT * FROM payment_setups WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, session.user.email).first();
+            let existing = await env.DB.prepare("SELECT * FROM payment_setups WHERE minecraft_uuid = ? OR email = ?").bind(minecraftUuid, session.user.email).first();
             if (existing && existing.payment_authorized) {
                 return new Response(JSON.stringify({ error: 'Du bist bereits registriert.' }), {
                     status: 400,
@@ -668,8 +679,14 @@ export default {
             }
             // Registrierung durchführen (payment_authorized = 1, Stripe-Felder leer)
             if (existing) {
-                await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = 1, canceled_at = NULL WHERE email = ?")
-                    .bind(minecraftUuid, session.user.email).run();
+                // Falls Eintrag mit E-Mail aber ohne minecraft_uuid existiert, aktualisiere ihn
+                if (!existing.minecraft_uuid) {
+                    await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = 1, canceled_at = NULL WHERE email = ?")
+                        .bind(minecraftUuid, session.user.email).run();
+                } else {
+                    await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 1, canceled_at = NULL WHERE email = ?")
+                        .bind(session.user.email).run();
+                }
             } else {
                 await env.DB.prepare(
                     "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (?, ?, '', 1, ?, NULL, ?)"
