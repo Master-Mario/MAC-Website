@@ -587,17 +587,17 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            const { minecraft_username, betrag } = body;
-            if (!minecraft_username || typeof betrag !== 'number') {
-                return new Response(JSON.stringify({ error: 'minecraft_username und betrag (number) erforderlich' }), {
+            const { email, betrag } = body;
+            if (!email || typeof betrag !== 'number') {
+                return new Response(JSON.stringify({ error: 'E-Mail und betrag (number) erforderlich' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
             // Username -> UUID
-            let uuid = minecraft_username;
+            let uuid = email;
             try {
-                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraft_username)}`);
+                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(email)}`);
                 if (playerdbRes.ok) {
                     const playerdbData = await playerdbRes.json();
                     if (playerdbData?.data?.player?.id) uuid = playerdbData.data.player.id;

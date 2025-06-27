@@ -185,7 +185,7 @@
     <div class="admin-container">
         <h1>Guthaben-Adminpanel</h1>
         <form id="guthabenForm">
-            <label>Minecraft-Name: <input type="text" id="mcName" required></label>
+            <label>E-Mail: <input type="email" id="mcName" required></label>
             <label>Betrag (€): <input type="number" id="betrag" step="0.01" required></label>
             <button type="submit">Guthaben setzen</button>
         </form>
@@ -224,7 +224,7 @@
     ladeGuthaben();
     document.getElementById('guthabenForm').onsubmit = async e => {
         e.preventDefault();
-        const mcName = document.getElementById('mcName').value.trim();
+        const email = document.getElementById('mcName').value.trim();
         const betrag = parseFloat(document.getElementById('betrag').value);
         const msg = document.getElementById('msg');
         msg.textContent = '';
@@ -232,7 +232,7 @@
         const res = await fetch('/api/admin/guthaben-setzen', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ minecraft_username: mcName, betrag })
+            body: JSON.stringify({ email, betrag })
         });
         if (res.ok) {
             msg.textContent = 'Guthaben erfolgreich gesetzt!';
