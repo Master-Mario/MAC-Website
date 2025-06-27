@@ -697,11 +697,19 @@ export default {
         await ensureBillingHistoryTable(env);
         const serverKosten = parseFloat(env.SERVER_COSTS || '0');
         const now = new Date();
-        // Nur aktive Nutzer (registriert, nicht gekündigt oder Kündigung in der Zukunft)
-        const rows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(now.toISOString()).all()).results || [];
-        const nutzerAnzahl = rows.length > 0 ? rows.length : 1;
+        // Alle Nutzer (registriert, nicht gekündigt oder Kündigung in der Zukunft)
+        const allRows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1 AND (canceled_at IS NULL OR canceled_at > ?)').bind(now.toISOString()).all()).results || [];
+
+        // Filtere nur aktive Nutzer für die Kostenberechnung
+        const activeRows = allRows.filter(row => row.active === 1);
+        const nutzerAnzahl = activeRows.length > 0 ? activeRows.length : 1;
         const kostenanteil = serverKosten / nutzerAnzahl;
-        for (const row of rows) {
+
+        // Nur aktiven Nutzern Kosten berechnen
+        for (const row of activeRows) {
+            // Zahlungsmethode bestimmen und verarbeiten
+            let zahlungErfolgt = false;
+
             // Stripe-Abbuchung, falls aktiviert und autorisiert
             try {
                 if (row.stripe_customer_id && row.stripe_payment_method_id && kostenanteil > 0) {
@@ -724,6 +732,9 @@ export default {
                     const paymentIntent = await paymentIntentRes.json();
                     if (!paymentIntentRes.ok && env.LOG_ERRORS) {
                         console.error('Stripe PaymentIntent Fehler:', paymentIntent.error ? paymentIntent.error.message : paymentIntent);
+                    } else {
+                        // Stripe-Zahlung erfolgreich
+                        zahlungErfolgt = true;
                     }
                 }
             } catch (err) {
@@ -731,17 +742,23 @@ export default {
                     console.error('Stripe PaymentIntent Exception:', err);
                 }
             }
-            // Guthaben abbuchen
-            let neuesGuthaben = (row.guthaben || 0) - kostenanteil;
-            let paymentAuthorized = row.payment_authorized;
-            let active = row.active;
-            if (neuesGuthaben < 0) {
-                paymentAuthorized = 0; // User sperren
-                active = 0;
+
+            // Guthaben nur abbuchen, wenn keine Kartenzahlung erfolgt ist
+            if (!zahlungErfolgt) {
+                // Guthaben abbuchen
+                let neuesGuthaben = (row.guthaben || 0) - kostenanteil;
+                let paymentAuthorized = row.payment_authorized;
+                let active = row.active;
+                if (neuesGuthaben < 0) {
+                    paymentAuthorized = 0; // User sperren
+                    active = 0;
+                }
+                await env.DB.prepare(
+                    'UPDATE payment_setups SET guthaben = ?, payment_authorized = ?, active = ? WHERE minecraft_uuid = ?'
+                ).bind(neuesGuthaben, paymentAuthorized, active, row.minecraft_uuid).run();
             }
-            await env.DB.prepare(
-                'UPDATE payment_setups SET guthaben = ?, payment_authorized = ?, active = ? WHERE minecraft_uuid = ?'
-            ).bind(neuesGuthaben, paymentAuthorized, active, row.minecraft_uuid).run();
+
+            // Abrechnungseintrag in jedem Fall erstellen
             await env.DB.prepare(
                 'INSERT INTO billing_history (email, abrechnungsmonat, kostenanteil, timestamp, nutzungszeit) VALUES (?, ?, ?, ?, 1)'
             ).bind(
@@ -750,6 +767,10 @@ export default {
                 kostenanteil,
                 now.toISOString()
             ).run();
+        }
+
+        // Prüfe alle Nutzer (inklusive inaktive) auf Kündigungen
+        for (const row of allRows) {
             // Setze am Ende des Monats active auf false, statt zu löschen
             if (row.canceled_at) {
                 const canceledAt = new Date(row.canceled_at);
