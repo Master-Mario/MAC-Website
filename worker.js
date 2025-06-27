@@ -671,23 +671,28 @@ export default {
             }
             // Guthaben prüfen
             const user = await env.DB.prepare("SELECT guthaben FROM payment_setups WHERE email = ?").bind(session.user.email).first();
-            const guthaben = user ? (user.guthaben || 0) : 0;
-            // Registrierung durchführen
+            if (!user || (user.guthaben || 0) <= 0) {
+                return new Response(JSON.stringify({ error: 'Nicht genug Guthaben. Bitte lade zuerst Guthaben auf.' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Registrierung durchführen (payment_authorized = 1, Stripe-Felder leer)
             if (existing) {
                 // Falls Eintrag mit E-Mail aber ohne minecraft_uuid existiert, aktualisiere ihn
                 if (!existing.minecraft_uuid) {
-                    await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = ?, canceled_at = NULL WHERE email = ?")
-                        .bind(minecraftUuid, guthaben > 0 ? 1 : 0, session.user.email).run();
+                    await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = 1, canceled_at = NULL WHERE email = ?")
+                        .bind(minecraftUuid, session.user.email).run();
                 } else {
-                    await env.DB.prepare("UPDATE payment_setups SET payment_authorized = ?, canceled_at = NULL WHERE email = ?")
-                        .bind(guthaben > 0 ? 1 : 0, session.user.email).run();
+                    await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 1, canceled_at = NULL WHERE email = ?")
+                        .bind(session.user.email).run();
                 }
             } else {
                 await env.DB.prepare(
-                    "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (?, ?, '', ?, ?, NULL, ?)"
-                ).bind(minecraftUuid, session.user.email, guthaben > 0 ? 1 : 0, new Date().toISOString(), guthaben).run();
+                    "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben) VALUES (?, ?, '', 1, ?, NULL, ?)"
+                ).bind(minecraftUuid, session.user.email, new Date().toISOString(), user.guthaben).run();
             }
-            return new Response(JSON.stringify({ success: true, active: guthaben > 0 }), {
+            return new Response(JSON.stringify({ success: true }), {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
