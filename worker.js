@@ -176,7 +176,8 @@ export default {
                     email TEXT NOT NULL,
                     abrechnungsmonat TEXT NOT NULL,
                     kostenanteil REAL NOT NULL,
-                    timestamp TEXT NOT NULL
+                    timestamp TEXT NOT NULL,
+                    nutzungszeit INTEGER NOT NULL DEFAULT 1
                 );
             `).run();
         }
@@ -742,7 +743,7 @@ export default {
                 'UPDATE payment_setups SET guthaben = ?, payment_authorized = ?, active = ? WHERE minecraft_uuid = ?'
             ).bind(neuesGuthaben, paymentAuthorized, active, row.minecraft_uuid).run();
             await env.DB.prepare(
-                'INSERT INTO billing_history (email, abrechnungsmonat, kostenanteil, timestamp) VALUES (?, ?, ?, ?)'
+                'INSERT INTO billing_history (email, abrechnungsmonat, kostenanteil, timestamp, nutzungszeit) VALUES (?, ?, ?, ?, 1)'
             ).bind(
                 row.email,
                 now.getMonth(),
@@ -810,7 +811,8 @@ async function ensureBillingHistoryTable(env) {
             email TEXT NOT NULL,
             abrechnungsmonat TEXT NOT NULL,
             kostenanteil REAL NOT NULL,
-            timestamp TEXT NOT NULL
+            timestamp TEXT NOT NULL,
+            nutzungszeit INTEGER NOT NULL DEFAULT 1
         );
     `).run();
 }
