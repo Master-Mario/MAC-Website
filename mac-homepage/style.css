@@ -520,7 +520,7 @@ footer {
     gap: 0.5rem;
 }
 
-.registration-form .agb-checkbox input[type="checkbox"] {
+.registration-form .agb-checkbox .checkbox input[type="checkbox"] {
     width: auto;
     accent-color: #ff0023;
 }
