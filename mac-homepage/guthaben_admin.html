@@ -28,17 +28,17 @@
             letter-spacing: 1px;
             text-shadow: 0 2px 12px #181a1b;
         }
-        form#guthabenForm {
+        form {
             display: flex;
             flex-direction: column;
             gap: 1.2em;
             margin-bottom: 1.5em;
         }
-        form#guthabenForm label {
+        form label {
             font-weight: 500;
             color: #f3f3f3;
         }
-        form#guthabenForm input {
+        form input {
             padding: 10px 14px;
             border-radius: 8px;
             border: 1.5px solid #232526;
@@ -48,7 +48,7 @@
             margin-left: 0.5em;
             transition: border 0.2s, box-shadow 0.2s;
         }
-        form#guthabenForm input:focus {
+        form input:focus {
             border: 1.5px solid #ff375e;
             outline: none;
             box-shadow: 0 0 0 2px #ff375e33;
@@ -71,7 +71,7 @@
             transform: translateY(-2px) scale(1.04);
             box-shadow: 0 8px 32px rgba(255,0,35,0.18);
         }
-        #msg {
+        .msg {
             min-height: 1.5em;
             text-align: center;
             font-weight: 600;
@@ -93,7 +93,7 @@
             text-align: center;
             text-shadow: 0 2px 12px #181a1b;
         }
-        .guthaben-table {
+        table {
             border-collapse: collapse;
             width: 100%;
             margin-top: 1em;
@@ -102,27 +102,27 @@
             overflow: hidden;
             box-shadow: 0 2px 12px rgba(0,0,0,0.18);
         }
-        .guthaben-table th, .guthaben-table td {
+        th, td {
             border: none;
             padding: 13px 10px;
             text-align: left;
         }
-        .guthaben-table th {
+        th {
             background: #ff375e;
             color: #fff;
             font-weight: 600;
             letter-spacing: 0.5px;
         }
-        .guthaben-table td {
+        td {
             color: #f3f3f3;
         }
-        .guthaben-table tr:nth-child(even) {
+        tr:nth-child(even) {
             background: #232526;
         }
-        .guthaben-table tr:nth-child(odd) {
+        tr:nth-child(odd) {
             background: #181a1b;
         }
-        .guthaben-table tr:hover {
+        tr:hover {
             background: #2e2e36;
             transition: background 0.2s;
         }
@@ -158,6 +158,49 @@
             color: #ff375e;
             font-weight: 600;
         }
+        .code-panel {
+            margin-top: 2em;
+            padding: 1.5em;
+            border: 2px dashed #ff375e;
+            border-radius: 12px;
+            background: rgba(255,55,94,0.05);
+            text-align: center;
+            display: none;
+        }
+        .code-display {
+            font-family: monospace;
+            font-size: 2em;
+            font-weight: 700;
+            color: #ff375e;
+            letter-spacing: 3px;
+            margin: 0.5em 0;
+            animation: pulse 2s infinite;
+        }
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid #ff375e;
+            margin-bottom: 2em;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: #232526;
+            border: none;
+            color: #f3f3f3;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: #ff375e;
+            color: #fff;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
         @keyframes fadeInUp {
             0% { opacity: 0; transform: translateY(30px); }
             100% { opacity: 1; transform: translateY(0); }
@@ -175,30 +218,79 @@
             80% { transform: translateX(4px); }
             100% { transform: translateX(0); }
         }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
         @media (max-width: 700px) {
             .admin-container { padding: 1.2em 0.5em; }
-            .guthaben-table th, .guthaben-table td { font-size: 0.98em; padding: 8px 4px; }
+            table th, table td { font-size: 0.98em; padding: 8px 4px; }
         }
     </style>
 </head>
 <body>
     <div class="admin-container">
         <h1>Guthaben-Adminpanel</h1>
-        <form id="guthabenForm">
-            <label>E-Mail: <input type="email" id="mcName" required></label>
-            <label>Betrag (€): <input type="number" id="betrag" step="0.01" required></label>
-            <button type="submit">Guthaben setzen</button>
-        </form>
-        <div id="msg"></div>
-        <h2>Alle User mit Guthaben ≠ 0</h2>
-        <table class="guthaben-table" id="guthabenTable">
-            <thead>
-                <tr><th>Minecraft UUID</th><th>E-Mail</th><th>Guthaben (€)</th></tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+
+        <div class="tab-container">
+            <button class="tab active" data-tab="guthaben">Guthaben setzen</button>
+            <button class="tab" data-tab="codes">Guthabencodes</button>
+        </div>
+
+        <div id="guthaben-tab" class="tab-content active">
+            <form id="guthabenForm">
+                <label>E-Mail: <input type="email" id="mcName" required></label>
+                <label>Betrag (€): <input type="number" id="betrag" step="0.01" required></label>
+                <button type="submit">Guthaben setzen</button>
+            </form>
+            <div id="guthabenMsg" class="msg"></div>
+
+            <h2>Alle User mit Guthaben ≠ 0</h2>
+            <table class="guthaben-table" id="guthabenTable">
+                <thead>
+                    <tr><th>Minecraft UUID</th><th>E-Mail</th><th>Guthaben (€)</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="codes-tab" class="tab-content">
+            <form id="codeForm">
+                <label>Betrag (€): <input type="number" id="codeBetrag" step="0.01" min="0.01" required></label>
+                <button type="submit">Code erstellen</button>
+            </form>
+            <div id="codeMsg" class="msg"></div>
+
+            <div id="codePanel" class="code-panel">
+                <h3>Erstellter Code:</h3>
+                <div id="codeDisplay" class="code-display"></div>
+                <p>Dieser Code kann einmalig eingelöst werden und ist dann nicht mehr gültig.</p>
+            </div>
+
+            <h2>Alle aktiven Codes</h2>
+            <table id="codesTable">
+                <thead>
+                    <tr><th>Code</th><th>Betrag (€)</th><th>Erstellt am</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
+
     <script>
+    // Tab-Funktionalität
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+        });
+    });
+
+    // Guthaben-Funktionalität
     async function ladeGuthaben() {
         const res = await fetch('/api/admin/guthaben');
         const tbody = document.querySelector('#guthabenTable tbody');
@@ -214,35 +306,99 @@
                 let badgeClass = 'guthaben-badge zero';
                 if (row.guthaben > 0) badgeClass = 'guthaben-badge positive';
                 else if (row.guthaben < 0) badgeClass = 'guthaben-badge negative';
-                tr.innerHTML = `<td style="font-family:monospace;">${row.minecraft_uuid}</td><td>${row.email}</td><td><span class='${badgeClass}'>${row.guthaben.toFixed(2).replace('.', ',')}</span> <span class='guthaben-euro'>€</span></td>`;
+                tr.innerHTML = `<td style="font-family:monospace;">${row.minecraft_uuid || '-'}</td><td>${row.email}</td><td><span class='${badgeClass}'>${row.guthaben.toFixed(2).replace('.', ',')}</span> <span class='guthaben-euro'>€</span></td>`;
                 tbody.appendChild(tr);
             });
         } else {
             tbody.innerHTML = '<tr><td colspan="3">Fehler beim Laden</td></tr>';
         }
     }
+
+    // Codes-Funktionalität
+    async function ladeCodes() {
+        const res = await fetch('/api/admin/codes');
+        const tbody = document.querySelector('#codesTable tbody');
+        tbody.innerHTML = '';
+        if (res.ok) {
+            const daten = await res.json();
+            if (daten.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#888;">Keine aktiven Codes</td></tr>';
+                return;
+            }
+            daten.forEach(row => {
+                const tr = document.createElement('tr');
+                // Datum formatieren
+                const datum = new Date(row.created_at);
+                const datumFormatiert = datum.toLocaleString('de-DE');
+                tr.innerHTML = `<td style="font-family:monospace;font-weight:bold;">${row.code}</td><td><span class='guthaben-badge positive'>${row.betrag.toFixed(2).replace('.', ',')}</span> <span class='guthaben-euro'>€</span></td><td>${datumFormatiert}</td>`;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3">Fehler beim Laden</td></tr>';
+        }
+    }
+
+    // Lade Daten initial
     ladeGuthaben();
+    ladeCodes();
+
+    // Event-Listener für Guthaben setzen
     document.getElementById('guthabenForm').onsubmit = async e => {
         e.preventDefault();
         const email = document.getElementById('mcName').value.trim();
         const betrag = parseFloat(document.getElementById('betrag').value);
-        const msg = document.getElementById('msg');
+        const msg = document.getElementById('guthabenMsg');
         msg.textContent = '';
-        msg.className = '';
+        msg.className = 'msg';
+
         const res = await fetch('/api/admin/guthaben-setzen', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, betrag })
         });
+
         if (res.ok) {
             msg.textContent = 'Guthaben erfolgreich gesetzt!';
-            msg.className = 'success';
+            msg.className = 'msg success';
             ladeGuthaben();
         } else {
             let err = 'Fehler beim Setzen';
             try { err = (await res.json()).error || err; } catch {}
             msg.textContent = err;
-            msg.className = 'error';
+            msg.className = 'msg error';
+        }
+    };
+
+    // Event-Listener für Code erstellen
+    document.getElementById('codeForm').onsubmit = async e => {
+        e.preventDefault();
+        const betrag = parseFloat(document.getElementById('codeBetrag').value);
+        const msg = document.getElementById('codeMsg');
+        const codePanel = document.getElementById('codePanel');
+        const codeDisplay = document.getElementById('codeDisplay');
+
+        msg.textContent = '';
+        msg.className = 'msg';
+        codePanel.style.display = 'none';
+
+        const res = await fetch('/api/admin/code-erstellen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ betrag })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            msg.textContent = `Code im Wert von ${betrag.toFixed(2).replace('.', ',')} € erstellt!`;
+            msg.className = 'msg success';
+            codeDisplay.textContent = data.code;
+            codePanel.style.display = 'block';
+            ladeCodes();
+        } else {
+            let err = 'Fehler beim Erstellen';
+            try { err = (await res.json()).error || err; } catch {}
+            msg.textContent = err;
+            msg.className = 'msg error';
         }
     };
     </script>

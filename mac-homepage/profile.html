@@ -167,6 +167,15 @@
             <span id="guthabenBetrag" class="guthaben-badge">–</span>
             <span class="guthaben-euro">€</span>
         </div>
+
+        <div id="code-section" style="margin-top:2em; max-width:320px; margin-left:auto; margin-right:auto;">
+            <form id="codeForm" style="display:flex; flex-direction:column; gap:1rem;">
+                <h3 style="color:#ff0023; margin-bottom:0.5rem; text-align:center;">Guthabencode einlösen</h3>
+                <input type="text" id="codeInput" placeholder="Code eingeben" style="padding:12px; border-radius:8px; background:#1e1e1e; color:white; border:1px solid #333; text-align:center; font-family:monospace; letter-spacing:2px; font-size:1.1rem; text-transform:uppercase;">
+                <button type="submit" class="abo-link" style="width:100%; cursor:pointer;">Code einlösen</button>
+                <div id="codeMsg" style="min-height:1.5rem; text-align:center; font-weight:600; font-size:0.9rem;"></div>
+            </form>
+        </div>
     </section>
     <footer>
         <div class="footer-links">
@@ -184,22 +193,32 @@
         const name = document.getElementById('profileName');
         const logoutBtn = document.getElementById('logoutBtn');
         const guthabenBetrag = document.getElementById('guthabenBetrag');
+        const codeForm = document.getElementById('codeForm');
+        const codeInput = document.getElementById('codeInput');
+        const codeMsg = document.getElementById('codeMsg');
+
+        // Aktualisiert das Guthaben im UI
+        function updateGuthaben(betrag) {
+            let formattedBetrag = betrag ? betrag.toFixed(2).replace('.', ',') : '0,00';
+            guthabenBetrag.textContent = formattedBetrag;
+            guthabenBetrag.classList.remove('positive', 'negative', 'zero');
+
+            if (betrag > 0) {
+                guthabenBetrag.classList.add('positive');
+            } else if (betrag < 0) {
+                guthabenBetrag.classList.add('negative');
+            } else {
+                guthabenBetrag.classList.add('zero');
+            }
+        }
+
         try {
             const res = await fetch('/api/auth/status', { credentials: 'include' });
             const data = await res.json();
             if (data.loggedIn && data.user) {
                 name.textContent = data.user.username;
-                let betrag = data.user.guthaben ? data.user.guthaben.toFixed(2).replace('.', ',') : '0,00';
-                let badge = guthabenBetrag;
-                badge.innerHTML = betrag;
-                badge.classList.remove('positive', 'negative', 'zero');
-                if (data.user.guthaben > 0) {
-                    badge.classList.add('positive');
-                } else if (data.user.guthaben < 0) {
-                    badge.classList.add('negative');
-                } else {
-                    badge.classList.add('zero');
-                }
+                updateGuthaben(data.user.guthaben);
+
                 if (data.user.id && data.user.avatar) {
                     avatar.src = `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`;
                 } else {
@@ -211,6 +230,46 @@
         } catch (e) {
             window.location.href = '/login';
         }
+
+        // Event-Handler für das Einlösen eines Guthabencodes
+        codeForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const code = codeInput.value.trim().toUpperCase();
+
+            if (!code) {
+                codeMsg.textContent = 'Bitte gib einen Code ein';
+                codeMsg.style.color = '#ff0023';
+                return;
+            }
+
+            codeMsg.textContent = 'Code wird geprüft...';
+            codeMsg.style.color = '#888';
+
+            try {
+                const res = await fetch('/api/code-einloesen', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    codeMsg.textContent = `Code erfolgreich eingelöst! +${data.betrag.toFixed(2).replace('.', ',')} €`;
+                    codeMsg.style.color = '#1db954'; // Grün
+                    codeInput.value = '';
+                    updateGuthaben(data.neuesGuthaben);
+                } else {
+                    codeMsg.textContent = data.error || 'Fehler beim Einlösen des Codes';
+                    codeMsg.style.color = '#ff0023'; // Rot
+                }
+            } catch (err) {
+                codeMsg.textContent = 'Fehler bei der Anfrage';
+                codeMsg.style.color = '#ff0023';
+                console.error(err);
+            }
+        });
+
         logoutBtn.addEventListener('click', async function() {
             await fetch('/logout', { credentials: 'include' });
             window.location.href = '/';
