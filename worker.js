@@ -478,7 +478,7 @@ export default {
                 amount = serverKosten / nutzerAnzahl;
             }
             return new Response(JSON.stringify({
-                active: !!row.payment_authorized,
+                active: row.active,
                 minecraft_username: minecraftUsername,
                 email: row.email,
                 stripe_id: row.stripe_id,
