@@ -698,8 +698,7 @@ export default {
         const serverKosten = parseFloat(env.SERVER_COSTS || '0');
         const now = new Date();
         // Alle Nutzer (registriert, nicht gekündigt oder Kündigung in der Zukunft)
-        const allRows = await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1') || [];
-        const everySingleRow = await env.DB.prepare('SELECT * FROM payment_setups') || [];
+        const allRows = (await env.DB.prepare('SELECT * FROM payment_setups WHERE payment_authorized = 1').results || [];
 
         // Filtere nur aktive Nutzer für die Kostenberechnung
         const activeRows = allRows.filter(row => row.active === 1);
@@ -771,7 +770,7 @@ export default {
         }
 
         // Prüfe alle Nutzer (inklusive inaktive) auf Kündigungen
-        for (const row of everySingleRow) {
+        for (const row of allRows) {
             // Setze am Ende des Monats active auf false, statt zu löschen
             if (row.canceled_at) {
                 const canceledAt = new Date(row.canceled_at);
