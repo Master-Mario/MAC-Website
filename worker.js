@@ -777,7 +777,7 @@ export default {
                 const nowDate = new Date(now); // Kopie, damit setDate keine Seiteneffekte hat
                 nowDate.setDate(nowDate.getDate() + 2);
                 // Bei Kündigung active auf 0 setzen und canceled_at auf null zurücksetzen
-                await env.DB.prepare('UPDATE payment_setups SET active = 0, canceled_at = NULL WHERE minecraft_uuid = ?').bind(row.minecraft_uuid).run();
+                await env.DB.prepare('UPDATE payment_setups SET active = 0, canceled_at = NULL WHERE email = ?').bind(row.email).run();
 
                 // Wenn ein Stripe-Kunde existiert, diesen auch aus Stripe löschen
                 if (row.stripe_customer_id) {
@@ -792,8 +792,8 @@ export default {
                         if (deleteRes.ok) {
                             // Stripe-Kundendaten aus der Datenbank entfernen
                             await env.DB.prepare(
-                                'UPDATE payment_setups SET stripe_customer_id = NULL, stripe_payment_method_id = NULL WHERE minecraft_uuid = ?'
-                            ).bind(row.minecraft_uuid).run();
+                                'UPDATE payment_setups SET stripe_customer_id = NULL, stripe_payment_method_id = NULL WHERE email = ?'
+                            ).bind(row.email).run();
 
                             if (env.LOG_ERRORS) {
                                 console.log(`Stripe-Kunde ${row.stripe_customer_id} für ${row.email} wurde gelöscht`);
