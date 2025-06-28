@@ -179,6 +179,7 @@
         const nextPayEl = document.getElementById('aboNextPay');
         const amountEl = document.getElementById('aboAmount');
         const emailEl = document.getElementById('aboEmail');
+        const paymentMethodEl = document.getElementById('aboPaymentMethod');
         const cancelBtn = document.getElementById('cancelAboBtn');
         const cancelModal = document.getElementById('cancelModal');
         const confirmCancelBtn = document.getElementById('confirmCancelBtn');
@@ -213,6 +214,8 @@
                 statusEl.classList.toggle('inactive', !abo.active || abo.canceled_at !== null);
                 sinceEl.textContent = abo.since ? new Date(abo.since).toLocaleDateString('de-AT') : '-';
                 mcEl.textContent = abo.minecraft_username || '-';
+                // Zahlungsart dynamisch aus Backend anzeigen
+                if (paymentMethodEl) paymentMethodEl.textContent = abo.zahlungsmethode || '-';
                 // --- next_pay und billing_day_env anzeigen ---
                 if (abo.next_pay) {
                     // next_pay ist ein ISO-Datum, z.B. "2025-07-12T23:59:59.999Z"
