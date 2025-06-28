@@ -419,3 +419,42 @@ document.addEventListener('DOMContentLoaded', () => {
     checkSmpAuthAndShowForm();
 });
 // --- Registrierung/Login Sichtbarkeit für SMP-Formular ---
+document.addEventListener('DOMContentLoaded', async function() {
+        // ...existing code...
+        const paymentMethodEl = document.getElementById('aboPaymentMethod');
+        // ...existing code...
+        let abo = null;
+        try {
+            const res = await fetch('/api/d1/abo-status', { credentials: 'include' });
+            if (res.ok) {
+                abo = await res.json();
+                // Zahlungsart bestimmen
+                let paymentMethod = '-';
+                if (abo.stripe_id && abo.stripe_id !== '' && abo.active) {
+                    paymentMethod = 'Stripe';
+                } else if ((!abo.stripe_id || abo.stripe_id === '') && abo.active) {
+                    paymentMethod = 'Guthaben';
+                } else if (!abo.active) {
+                    paymentMethod = '-';
+                }
+                if (paymentMethodEl) paymentMethodEl.textContent = paymentMethod;
+                // Felder nur anzeigen, wenn aktiv
+                const detailsDiv = document.querySelector('.abo-details');
+                if (detailsDiv) {
+                    detailsDiv.style.display = (abo.active ? '' : 'none');
+                }
+                // ...existing code...
+            } else {
+                // ...existing code...
+                if (paymentMethodEl) paymentMethodEl.textContent = '-';
+                const detailsDiv = document.querySelector('.abo-details');
+                if (detailsDiv) detailsDiv.style.display = 'none';
+            }
+        } catch (e) {
+            // ...existing code...
+            if (paymentMethodEl) paymentMethodEl.textContent = '-';
+            const detailsDiv = document.querySelector('.abo-details');
+            if (detailsDiv) detailsDiv.style.display = 'none';
+        }
+        // ...existing code...
+    });
