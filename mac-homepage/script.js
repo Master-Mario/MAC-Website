@@ -218,6 +218,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const agbChecked = document.getElementById('agb').checked;
             const payWithGuthaben = document.getElementById('payWithGuthaben')?.checked;
 
+            // Neue Logik: Zahlungsmethode auslesen
+            const zahlungsmethode = document.querySelector('input[name="zahlungsmethode"]:checked')?.value || 'stripe';
+
             if (!agbChecked) {
                 paymentMessage.textContent = 'Bitte stimme den AGB und der Datenschutzerklärung zu.';
                 return;
@@ -229,12 +232,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                if (payWithGuthaben) {
+                if (zahlungsmethode === 'guthaben') {
                     // Registrierung mit Guthaben
                     const response = await fetch('/api/register-guthaben', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ minecraftUsername })
+                        body: JSON.stringify({ minecraftUsername, zahlungsmethode })
                     });
                     const data = await response.json();
                     if (response.ok && data.success) {
@@ -245,13 +248,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // 1. Create a checkout session on the server
-                const response = await fetch('/create-checkout-session', { // Sicherstellen, dass der Pfad korrekt ist
+                // 1. Create a checkout session auf dem Server
+                const response = await fetch('/create-checkout-session', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ minecraftUsername }),
+                    body: JSON.stringify({ minecraftUsername, zahlungsmethode }),
                 });
 
                 if (!response.ok) {

@@ -165,6 +165,10 @@ export default {
                 try {
                     await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN active BOOLEAN DEFAULT 0;").run();
                 } catch (e) { /* Spalte existiert evtl. schon */ }
+                // Migration: Spalte zahlungsmethode (TEXT) hinzufügen, falls nicht vorhanden
+                try {
+                    await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN zahlungsmethode TEXT DEFAULT NULL;").run();
+                } catch (e) { /* Spalte existiert evtl. schon */ }
             }
         }
 
@@ -200,13 +204,20 @@ export default {
         if (path === '/create-checkout-session' && method === 'POST') {
             await ensurePaymentSetupsTable(env);
             const body = await request.json();
-            const { minecraftUsername } = body;
+            const { minecraftUsername, zahlungsmethode } = body;
             // Discord-Session holen
             const token = getCookie(request, 'mac_sid');
             const session = token ? await verifyJWT(token) : null;
             const email = session?.user?.email;
             if (!email || !minecraftUsername) {
                 return new Response(JSON.stringify({ error: 'Daten erforderlich (Discord-Login & Minecraft-Username)' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Nur Stripe-Checkout, wenn wirklich Stripe gewählt wurde
+            if (zahlungsmethode && zahlungsmethode !== 'stripe') {
+                return new Response(JSON.stringify({ error: 'Ungültige Zahlungsmethode für diesen Endpoint.' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -255,7 +266,7 @@ export default {
                     if (existing) {
                         // Wenn gekündigt oder inaktiv, reaktiviere bestehenden Eintrag (statt INSERT)
                         if (existing.canceled_at || existing.active === 0) {
-                            await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 0, stripe_id = ?, created_at = ?, canceled_at = NULL WHERE minecraft_uuid = ? OR email = ?")
+                            await env.DB.prepare("UPDATE payment_setups SET payment_authorized = 0, stripe_id = ?, created_at = ?, canceled_at = NULL, zahlungsmethode = 'stripe' WHERE minecraft_uuid = ? OR email = ?")
                                 .bind(session.id, new Date().toISOString(), minecraftUuid, email)
                                 .run();
                         } else {
@@ -267,7 +278,7 @@ export default {
                     } else {
                         // Kein bestehender Eintrag: normal anlegen
                         await env.DB.prepare(
-                            "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at) VALUES (?, ?, ?, ?, ?, ?)"
+                            "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, zahlungsmethode) VALUES (?, ?, ?, ?, ?, ?, 'stripe')"
                         )
                             .bind(minecraftUuid, email, session.id, false, new Date().toISOString(), null)
                             .run();
@@ -323,7 +334,7 @@ export default {
             // Update payment_authorized, payment_method, stripe_customer_id und stripe_payment_method_id in der Datenbank
             try {
                 await env.DB.prepare(
-                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_customer_id = ?, stripe_payment_method_id = ?, active = 1 WHERE stripe_id = ?"
+                    "UPDATE payment_setups SET payment_authorized = ?, payment_method = ?, stripe_customer_id = ?, stripe_payment_method_id = ?, active = 1, zahlungsmethode = 'stripe' WHERE stripe_id = ?"
                 )
                     .bind(true, "stripe", customerId, paymentMethodId, sessionId)
                     .run();
@@ -498,7 +509,8 @@ export default {
                 canceled_at: row.canceled_at || null,
                 next_pay,
                 billing_day_env,
-                amount: amount !== null ? parseFloat(amount.toFixed(2)) : null
+                amount: amount !== null ? parseFloat(amount.toFixed(2)) : null,
+                zahlungsmethode: row.zahlungsmethode || null
             }), {
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -771,9 +783,15 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            const { minecraftUsername } = body;
+            const { minecraftUsername, zahlungsmethode } = body;
             if (!minecraftUsername) {
                 return new Response(JSON.stringify({ error: 'Minecraft-Username erforderlich' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            if (zahlungsmethode && zahlungsmethode !== 'guthaben') {
+                return new Response(JSON.stringify({ error: 'Ungültige Zahlungsmethode für diesen Endpoint.' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -808,13 +826,13 @@ export default {
                     headers: { 'Content-Type': 'application/json' }
                 });
             }
-            // Registrierung durchführen (payment_authorized = 1, Stripe-Felder leer)
+            // Registrierung durchführen (payment_authorized = 1, Stripe-Felder leer, zahlungsmethode = 'guthaben')
             if (existing) {
-                await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = 1, canceled_at = NULL, active = 1 WHERE email = ?")
+                await env.DB.prepare("UPDATE payment_setups SET minecraft_uuid = ?, payment_authorized = 1, canceled_at = NULL, active = 1, zahlungsmethode = 'guthaben' WHERE email = ?")
                     .bind(minecraftUuid, session.user.email).run();
             } else {
                 await env.DB.prepare(
-                    "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben, active) VALUES (?, ?, '', 1, ?, NULL, ?, 1)"
+                    "INSERT INTO payment_setups (minecraft_uuid, email, stripe_id, payment_authorized, created_at, canceled_at, guthaben, active, zahlungsmethode) VALUES (?, ?, '', 1, ?, NULL, ?, 1, 'guthaben')"
                 ).bind(minecraftUuid, session.user.email, new Date().toISOString(), user.guthaben).run();
             }
             return new Response(JSON.stringify({ success: true }), {
@@ -871,42 +889,43 @@ export default {
             // Zahlungsmethode bestimmen und verarbeiten
             let zahlungErfolgt = false;
 
-            // Stripe-Abbuchung, falls aktiviert und autorisiert
-            try {
-                if (row.stripe_customer_id && row.stripe_payment_method_id && kostenanteil > 0) {
-                    const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
-                        },
-                        body: new URLSearchParams({
-                            amount: Math.round(kostenanteil * 100).toString(), // Betrag in Cent
-                            currency: 'eur',
-                            customer: row.stripe_customer_id,
-                            payment_method: row.stripe_payment_method_id,
-                            off_session: 'true',
-                            confirm: 'true',
-                            description: `Monatliche Serverkosten (MAC-SMP) für ${now.getMonth()}`
-                        }).toString()
-                    });
-                    const paymentIntent = await paymentIntentRes.json();
-                    if (!paymentIntentRes.ok && env.LOG_ERRORS) {
-                        console.error('Stripe PaymentIntent Fehler:', paymentIntent.error ? paymentIntent.error.message : paymentIntent);
-                    } else {
-                        // Stripe-Zahlung erfolgreich
-                        zahlungErfolgt = true;
+            // Stripe-Abbuchung nur, wenn zahlungsmethode explizit 'stripe' ist
+            if (row.zahlungsmethode === 'stripe') {
+                try {
+                    if (row.stripe_customer_id && row.stripe_payment_method_id && kostenanteil > 0) {
+                        const paymentIntentRes = await fetch('https://api.stripe.com/v1/payment_intents', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`
+                            },
+                            body: new URLSearchParams({
+                                amount: Math.round(kostenanteil * 100).toString(), // Betrag in Cent
+                                currency: 'eur',
+                                customer: row.stripe_customer_id,
+                                payment_method: row.stripe_payment_method_id,
+                                off_session: 'true',
+                                confirm: 'true',
+                                description: `Monatliche Serverkosten (MAC-SMP) für ${now.getMonth()}`
+                            }).toString()
+                        });
+                        const paymentIntent = await paymentIntentRes.json();
+                        if (!paymentIntentRes.ok && env.LOG_ERRORS) {
+                            console.error('Stripe PaymentIntent Fehler:', paymentIntent.error ? paymentIntent.error.message : paymentIntent);
+                        } else {
+                            // Stripe-Zahlung erfolgreich
+                            zahlungErfolgt = true;
+                        }
                     }
-                }
-            } catch (err) {
-                if (env.LOG_ERRORS) {
-                    console.error('Stripe PaymentIntent Exception:', err);
+                } catch (err) {
+                    if (env.LOG_ERRORS) {
+                        console.error('Stripe PaymentIntent Exception:', err);
+                    }
                 }
             }
 
-            // Guthaben nur abbuchen, wenn keine Kartenzahlung erfolgt ist
-            if (!zahlungErfolgt) {
-                // Guthaben abbuchen
+            // Guthaben nur abbuchen, wenn zahlungsmethode explizit 'guthaben' ist
+            if (row.zahlungsmethode === 'guthaben' && !zahlungErfolgt) {
                 let neuesGuthaben = (row.guthaben || 0) - kostenanteil;
                 let paymentAuthorized = row.payment_authorized;
                 let active = row.active;
@@ -1014,6 +1033,10 @@ async function ensurePaymentSetupsTable(env) {
         // Migration: Spalte active (BOOLEAN) hinzufügen, falls nicht vorhanden
         try {
             await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN active BOOLEAN DEFAULT 0;").run();
+        } catch (e) { /* Spalte existiert evtl. schon */ }
+        // Migration: Spalte zahlungsmethode (TEXT) hinzufügen, falls nicht vorhanden
+        try {
+            await env.DB.prepare("ALTER TABLE payment_setups ADD COLUMN zahlungsmethode TEXT DEFAULT NULL;").run();
         } catch (e) { /* Spalte existiert evtl. schon */ }
     }
 }
