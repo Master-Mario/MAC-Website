@@ -37,7 +37,7 @@ function fetchMinecraftServerStatus() {
     const playersOnline = document.getElementById('serverPlayersOnline');
     const playersMax = document.getElementById('serverPlayersMax');
     // Öffentliche API, z.B. mcsrvstat.us
-    fetch('https://api.mcsrvstat.us/2/mac-netzwerk.net:25565')
+    fetch('https://api.mcsrvstat.us/2/mac-netzwerk.net')
         .then(response => response.json())
         .then(data => {
             if (data && data.online) {
