@@ -34,12 +34,14 @@ window.addEventListener('scroll', function() {
 function fetchMinecraftServerStatus() {
     const statusText = document.getElementById('serverStatusText');
     const statusIndicator = document.getElementById('serverStatusIndicator');
+    const playersOnline = document.getElementById('serverPlayersOnline');
+    const playersMax = document.getElementById('serverPlayersMax');
     // Öffentliche API, z.B. mcsrvstat.us
     fetch('https://api.mcsrvstat.us/2/mac-netzwerk.net:25565')
         .then(response => response.json())
         .then(data => {
             if (data && data.online) {
-                statusText.textContent = `Online (${data.players ? data.players.online : 0}/${data.players ? data.players.max : '?'})`;
+                statusText.textContent = `Online`;
                 statusText.style.color = '#27c93f';
                 if (statusIndicator) {
                     statusIndicator.style.display = 'inline-block';
@@ -48,6 +50,10 @@ function fetchMinecraftServerStatus() {
                     statusIndicator.style.height = '12px';
                     statusIndicator.style.borderRadius = '50%';
                     statusIndicator.style.marginRight = '8px';
+                }
+                if (playersOnline && playersMax) {
+                    playersOnline.textContent = data.players && typeof data.players.online === 'number' ? data.players.online : '?';
+                    playersMax.textContent = data.players && typeof data.players.max === 'number' ? data.players.max : '?';
                 }
             } else {
                 statusText.textContent = 'Offline';
@@ -60,6 +66,10 @@ function fetchMinecraftServerStatus() {
                     statusIndicator.style.borderRadius = '50%';
                     statusIndicator.style.marginRight = '8px';
                 }
+                if (playersOnline && playersMax) {
+                    playersOnline.textContent = '?';
+                    playersMax.textContent = '?';
+                }
             }
         })
         .catch(() => {
@@ -67,6 +77,10 @@ function fetchMinecraftServerStatus() {
             statusText.style.color = '#888';
             if (statusIndicator) {
                 statusIndicator.style.display = 'none';
+            }
+            if (playersOnline && playersMax) {
+                playersOnline.textContent = '?';
+                playersMax.textContent = '?';
             }
         });
 }
