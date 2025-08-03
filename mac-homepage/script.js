@@ -29,6 +29,54 @@ window.addEventListener('scroll', function() {
 });
 
 // --- Auth Script Start ---
+
+// Minecraft Server Status Abfrage
+function fetchMinecraftServerStatus() {
+    const statusText = document.getElementById('serverStatusText');
+    const statusIndicator = document.getElementById('serverStatusIndicator');
+    // Öffentliche API, z.B. mcsrvstat.us
+    fetch('https://api.mcsrvstat.us/2/mac-netzwerk.net:25565')
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.online) {
+                statusText.textContent = `Online (${data.players ? data.players.online : 0}/${data.players ? data.players.max : '?'})`;
+                statusText.style.color = '#27c93f';
+                if (statusIndicator) {
+                    statusIndicator.style.display = 'inline-block';
+                    statusIndicator.style.background = '#27c93f';
+                    statusIndicator.style.width = '12px';
+                    statusIndicator.style.height = '12px';
+                    statusIndicator.style.borderRadius = '50%';
+                    statusIndicator.style.marginRight = '8px';
+                }
+            } else {
+                statusText.textContent = 'Offline';
+                statusText.style.color = '#ff0023';
+                if (statusIndicator) {
+                    statusIndicator.style.display = 'inline-block';
+                    statusIndicator.style.background = '#ff0023';
+                    statusIndicator.style.width = '12px';
+                    statusIndicator.style.height = '12px';
+                    statusIndicator.style.borderRadius = '50%';
+                    statusIndicator.style.marginRight = '8px';
+                }
+            }
+        })
+        .catch(() => {
+            statusText.textContent = 'Status nicht verfügbar';
+            statusText.style.color = '#888';
+            if (statusIndicator) {
+                statusIndicator.style.display = 'none';
+            }
+        });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetchMinecraftServerStatus();
+    // Optional: alle 60 Sekunden neu abfragen
+    setInterval(fetchMinecraftServerStatus, 60000);
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const discordLoginBtn = document.getElementById('discordLoginBtn');
     const userInfoDiv = document.getElementById('userInfo');

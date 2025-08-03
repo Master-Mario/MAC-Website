@@ -59,22 +59,14 @@
     </div>
 </nav>
 
-<!-- Hero Section -->
-<section id="home" class="hero">
-    <div class="hero-content">
-        <h1>MAC-Netzwerk</h1>
-        <p>Das Minecraft Server-Netzwerk aus Wien</p>
-
-        <div class="server-ip">
-            <h3>Server-IP</h3>
-            <p>mac-netzwerk.net</p>
-        </div>
-
-        <div class="cta-buttons">
-            <a href="https://discord.gg/FusjxDz7yb" class="btn btn-primary" target="_blank">Discord beitreten</a>
-            <a href="#server" class="btn btn-secondary">Server entdecken</a>
-        </div>
+<!-- Minecraft Server Status Section -->
+<section id="server-status-section" style="text-align:center; margin: 2em 0;">
+    <h2>Serverstatus</h2>
+    <div id="mc-server-status">
+        <span class="status-indicator" id="serverStatusIndicator"></span>
+        <span id="serverStatusText">Status wird geladen ...</span>
     </div>
+    <div style="margin-top:0.5em; color:#888; font-size:0.9em;">Adresse: <b>mac-netzwerk.net:25565</b></div>
 </section>
 
 <!-- Logout Confirmation Modal -->
@@ -103,4 +95,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
