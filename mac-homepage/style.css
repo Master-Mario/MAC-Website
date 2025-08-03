@@ -971,3 +971,79 @@ footer {
     }
 }
 /* --- Ende Profil Dropdown Menü --- */
+
+/* Minecraft Server Status Card */
+#server-status-section {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 60vh;
+    margin-top: 100px;
+    margin-bottom: 40px;
+}
+.server-status-card {
+    background: linear-gradient(135deg, #18181b 0%, #23232b 100%);
+    border-radius: 18px;
+    box-shadow: 0 4px 32px 0 rgba(255,0,35,0.10), 0 1.5px 8px 0 rgba(0,0,0,0.10);
+    padding: 2.5rem 2.5rem 2rem 2.5rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    border: 1.5px solid #2a2a2a;
+    animation: fadeIn 0.7s;
+}
+.server-status-card h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+    color: #ff0023;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7em;
+}
+.server-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.server-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.7em;
+    font-size: 1.2rem;
+    gap: 0.5em;
+}
+.status-indicator {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 0.5em;
+    transition: background 0.3s;
+}
+#serverStatusText {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+.server-players {
+    margin-bottom: 0.7em;
+    font-size: 1.1rem;
+    color: #fff;
+    background: #23232b;
+    border-radius: 8px;
+    display: inline-block;
+    padding: 0.3em 1.1em;
+    box-shadow: 0 1px 4px rgba(255,0,35,0.07);
+}
+.server-address {
+    margin-top: 1.1em;
+    color: #aaa;
+    font-size: 0.98rem;
+    letter-spacing: 0.2px;
+    user-select: all;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}

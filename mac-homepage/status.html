@@ -60,13 +60,18 @@
 </nav>
 
 <!-- Minecraft Server Status Section -->
-<section id="server-status-section" style="text-align:center; margin: 2em 0;">
-    <h2>Serverstatus</h2>
-    <div id="mc-server-status">
-        <span class="status-indicator" id="serverStatusIndicator"></span>
-        <span id="serverStatusText">Status wird geladen ...</span>
+<section id="server-status-section">
+    <div class="server-status-card">
+        <h2><img src="logos/favicon-32x32.png" alt="Server Icon" class="server-icon"> Minecraft Serverstatus</h2>
+        <div class="server-status-row">
+            <span class="status-indicator" id="serverStatusIndicator"></span>
+            <span id="serverStatusText">Status wird geladen ...</span>
+        </div>
+        <div class="server-players">
+            <span id="serverPlayers">Spieler: <span id="serverPlayersOnline">?</span>/<span id="serverPlayersMax">?</span></span>
+        </div>
+        <div class="server-address">Adresse: <b>mac-netzwerk.net:25565</b></div>
     </div>
-    <div style="margin-top:0.5em; color:#888; font-size:0.9em;">Adresse: <b>mac-netzwerk.net:25565</b></div>
 </section>
 
 <!-- Logout Confirmation Modal -->
