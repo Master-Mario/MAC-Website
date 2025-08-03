@@ -982,7 +982,7 @@ footer {
     margin-bottom: 40px;
 }
 .server-status-card {
-    background: linear-gradient(135deg, #18181b 0%, #23232b 100%);
+    background: linear-gradient(135deg, #111111 0%, #171010 100%);
     border-radius: 18px;
     box-shadow: 0 4px 32px 0 rgba(255,0,35,0.10), 0 1.5px 8px 0 rgba(0,0,0,0.10);
     padding: 2.5rem 2.5rem 2rem 2.5rem;
@@ -1003,8 +1003,8 @@ footer {
     gap: 0.7em;
 }
 .server-icon {
-    width: 32px;
-    height: 32px;
+    width: 5vw;
+    height: 5vw;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
