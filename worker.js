@@ -427,7 +427,7 @@ export default {
                 // Suche per Minecraft-Username (Plugin-API)
                 try {
                     // PlayerDB API: Username -> UUID
-                    const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(username)}`);
+                    const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${username}`);
                     if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler: " + await playerdbRes.json());
                     const playerdbData = await playerdbRes.json();
                     const minecraftUuid = playerdbData?.data?.player?.id;
