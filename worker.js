@@ -231,7 +231,7 @@ export default {
                 minecraftUuid = playerdbData?.data?.player?.id;
                 if (!minecraftUuid) throw new Error("UUID nicht gefunden");
             } catch (err) {
-                return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler' }), {
+                return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler: '+err.message }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
