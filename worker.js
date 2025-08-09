@@ -428,7 +428,7 @@ export default {
                 try {
                     // PlayerDB API: Username -> UUID
                     const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(username)}`);
-                    if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler: " + playerdbRes);
+                    if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler: " + await playerdbRes.json());
                     const playerdbData = await playerdbRes.json();
                     const minecraftUuid = playerdbData?.data?.player?.id;
                     if (!minecraftUuid) throw new Error("UUID nicht gefunden");
