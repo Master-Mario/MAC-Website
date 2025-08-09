@@ -62,18 +62,62 @@
 
 <!-- Minecraft Server Status Section -->
 <section id="server-status-section">
-    <div class="server-status-card">
-        <h2><img src="logos/android-chrome-192x192.png" alt="Server Icon" class="server-icon"> Minecraft Serverstatus</h2>
-        <div class="server-status-row">
-            <span class="status-indicator" id="serverStatusIndicator"></span>
-            <span id="serverStatusText">Status wird geladen ...</span>
+    <div class="container">
+        <div class="server-status-card">
+            <div class="server-status-header">
+                <img src="logos/android-chrome-192x192.png" alt="Server Icon" class="server-icon">
+                <h2>Minecraft Serverstatus</h2>
+            </div>
+
+            <div class="server-info">
+                <div class="status-box">
+                    <div class="server-status-row">
+                        <span class="status-indicator" id="serverStatusIndicator"></span>
+                        <span id="serverStatusText">Status wird geladen ...</span>
+                    </div>
+                    <div class="server-players">
+                        <span id="serverPlayers">Spieler: <span id="serverPlayersOnline">?</span>/<span id="serverPlayersMax">?</span></span>
+                    </div>
+                    <div class="server-address">
+                        <span class="label">Server-Adresse:</span>
+                        <span class="value">mac-netzwerk.net</span>
+                        <button class="copy-button" onclick="copyServerAddress()">Kopieren</button>
+                    </div>
+                </div>
+
+                <div class="server-version">
+                    <div class="version-box">
+                        <h3>Server-Version</h3>
+                        <p>1.7-1.21.8</p>
+                    </div>
+                    <div class="join-box">
+                        <a href="minecraft://?addExternalServer=MAC-Netzwerk|mac-netzwerk.net:25565" class="join-button">
+                            Jetzt verbinden
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player List Container -->
+            <div id="playerListContainer" class="player-list-container">
+                <!-- Wird dynamisch mit JavaScript gefüllt -->
+            </div>
         </div>
-        <div class="server-players">
-            <span id="serverPlayers">Spieler: <span id="serverPlayersOnline">?</span>/<span id="serverPlayersMax">?</span></span>
-        </div>
-        <div class="server-address">Adresse: <b>mac-netzwerk.net</b></div>
     </div>
 </section>
+
+<script>
+    function copyServerAddress() {
+        navigator.clipboard.writeText('mac-netzwerk.net').then(function() {
+            const button = document.querySelector('.copy-button');
+            const originalText = button.textContent;
+            button.textContent = 'Kopiert!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        });
+    }
+</script>
 
 <!-- Logout Confirmation Modal -->
 <div id="logoutConfirmationModal" class="modal-overlay">
