@@ -435,10 +435,10 @@ export default {
                     // Suche nach passendem Eintrag in D1 über die UUID
                     row = await env.DB.prepare(
                         'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
-                    ).bind(minecraftUuid).first();
+                    ).bind(minecraftUuid);
                     minecraftUsername = username;
                 } catch (err) {
-                    return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler' }), {
+                    return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler: ' + err.message }), {
                         status: 400,
                         headers: { 'Content-Type': 'application/json' }
                     });
