@@ -428,14 +428,14 @@ export default {
                 try {
                     // PlayerDB API: Username -> UUID
                     const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(username)}`);
-                    if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler");
+                    if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler: " + playerdbRes);
                     const playerdbData = await playerdbRes.json();
                     const minecraftUuid = playerdbData?.data?.player?.id;
                     if (!minecraftUuid) throw new Error("UUID nicht gefunden");
                     // Suche nach passendem Eintrag in D1 über die UUID
                     row = await env.DB.prepare(
                         'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
-                    ).bind(minecraftUuid);
+                    ).bind(minecraftUuid).first;
                     minecraftUsername = username;
                 } catch (err) {
                     return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler: ' + err.message }), {
