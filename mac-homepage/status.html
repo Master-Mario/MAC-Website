@@ -143,5 +143,23 @@
 </footer>
 
 <script src="script.js"></script>
+<script>
+    // Server-Adresse in Zwischenablage kopieren
+    function copyServerAddress() {
+        navigator.clipboard.writeText('mac-netzwerk.net').then(() => {
+            const copyButton = document.querySelector('.copy-button');
+            const originalText = copyButton.textContent;
+            copyButton.textContent = 'Kopiert!';
+            setTimeout(() => {
+                copyButton.textContent = originalText;
+            }, 2000);
+        });
+    }
+
+    // Server-Status beim Laden der Seite abrufen
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchMinecraftServerStatus();
+    });
+</script>
 </body>
 </html>

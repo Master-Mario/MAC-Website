@@ -427,8 +427,19 @@ export default {
                 // Suche per Minecraft-Username (Plugin-API)
                 try {
                     // Offizielle Mojang API: Username -> UUID
-                    const mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`).catch(error => console.log(error));
-                    if (!mojangApiRes.ok) throw new Error("Mojang API Fehler: " + mojangApiRes.url);
+                    const mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
+
+                    // Status-Code 204 oder 404 bedeutet, dass der Benutzer nicht existiert
+                    if (mojangApiRes.status === 204 || mojangApiRes.status === 404) {
+                        throw new Error(`Minecraft-Benutzer '${username}' nicht gefunden`);
+                    }
+
+                    // Bei anderen Fehlern einen generellen API-Fehler ausgeben
+                    if (!mojangApiRes.ok) {
+                        throw new Error(`Mojang API Fehler (Status ${mojangApiRes.status}): ${mojangApiRes.url}`);
+                    }
+
+                    // Antwort parsen
                     const mojangData = await mojangApiRes.json();
                     const minecraftUuid = mojangData?.id;
                     if (!minecraftUuid) throw new Error("UUID nicht gefunden");
