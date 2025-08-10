@@ -507,35 +507,46 @@ export default {
                                 }
                             }
 
-                            // Nur bei klaren Formatfehlern (kein Unterstrich am Ende) oder anderen Problemen
+                            // Nur bei klaren Formatfehlern oder anderen Problemen
                             throw new Error(`Der Minecraft-Benutzername '${username}' konnte nicht verifiziert werden. ${playerdbError}`);
                         }
 
                         const playerdbData = await playerdbRes.json();
+                        if (playerdbData?.success === false || !playerdbData?.data?.player?.id) {
+                            playerdbError = `Minecraft-Benutzer '${username}' nicht gefunden (PlayerDB)`;
+                            throw new Error(playerdbError);
+                        }
+
+                        // UUID extrahieren und formatieren
+                        const minecraftUuid = playerdbData.data.player.id;
+                        const formattedUuid = minecraftUuid.includes('-') ?
+                            minecraftUuid :
+                            `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
+
                         minecraftUsername = playerdbData.data.player.username;
+
                         // Suche nach passendem Eintrag in D1 über die UUID
                         row = await env.DB.prepare(
                             'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
-                        ).bind(playerdbData.data.player.id).first();
+                        ).bind(formattedUuid).first();
+
                     } catch (playerdbErr) {
                         // Wenn der Fehler speziell für ungültige Namen ist, diesen direkt weitergeben
-                        if (playerdbErr.message.includes('scheint ungültig zu sein')) {
+                        if (playerdbErr.message && playerdbErr.message.includes('scheint ungültig zu sein')) {
                             throw playerdbErr;
                         }
 
                         // Beide APIs haben Fehler gemeldet
                         if (mojangError && playerdbError) {
-                            // Bei beiden 400/403/404-Fehlern wahrscheinlich ungültiger Name
-                            if ((mojangApiRes.status === 403 || mojangApiRes.status === 404) &&
-                                playerdbRes.status === 400) {
-                                throw new Error(`Minecraft-Benutzername '${username}' existiert nicht oder ist ungültig.`);
-                            }
+                            // Bei beiden Fehlern wahrscheinlich ungültiger Name
+                            // Hier keine Referenz auf playerdbRes, da es möglicherweise nicht definiert ist
                             throw new Error(`Beide APIs fehlgeschlagen - Mojang: ${mojangError}, PlayerDB: ${playerdbError}`);
                         } else if (playerdbError) {
                             throw new Error(`PlayerDB API: ${playerdbError}`);
+                        } else {
+                            throw new Error(`Fehler bei der PlayerDB API-Anfrage: ${playerdbErr.message}`);
                         }
                     }
-
                 } catch (err) {
                     return new Response(JSON.stringify({
                         error: 'Ungültiger Minecraft Username oder API Fehler: ' + err.message,
