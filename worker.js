@@ -427,7 +427,6 @@ export default {
                 // Suche per Minecraft-Username (Plugin-API)
                 try {
                     // Validiere zuerst den Minecraft-Benutzernamen auf gültige Zeichen
-                    // Erlaubte Zeichen: a-z, A-Z, 0-9 und Unterstrich
 
                     // Offizielle Mojang API: Username -> UUID
                     let mojangError = null;
