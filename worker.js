@@ -428,7 +428,7 @@ export default {
                 try {
                     // Offizielle Mojang API: Username -> UUID
                     const mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
-                    if (!mojangApiRes.ok) throw new Error("Mojang API Fehler: " + mojangApiRes.status);
+                    if (!mojangApiRes.ok) throw new Error("Mojang API Fehler: " + await mojangApiRes.json());
                     const mojangData = await mojangApiRes.json();
                     const minecraftUuid = mojangData?.id;
                     if (!minecraftUuid) throw new Error("UUID nicht gefunden");

@@ -563,7 +563,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-// --- Cookie Banner Script ---
 
 // --- Registrierung/Login Sichtbarkeit für SMP-Formular ---
 document.addEventListener('DOMContentLoaded', () => {
