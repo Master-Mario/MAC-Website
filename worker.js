@@ -426,6 +426,16 @@ export default {
             if (username) {
                 // Suche per Minecraft-Username (Plugin-API)
                 try {
+                    // Validiere zuerst den Minecraft-Benutzernamen auf gültige Zeichen
+                    // Erlaubte Zeichen: a-z, A-Z, 0-9 und Unterstrich, aber nur wenn nicht am Ende
+                    if (!/^[a-zA-Z0-9_]{3,16}$/.test(username)) {
+                        throw new Error(`Ungültiger Minecraft-Benutzername (Format): '${username}' - Namen müssen 3-16 Zeichen lang sein und dürfen nur Buchstaben, Zahlen und Unterstriche enthalten.`);
+                    }
+
+                    if (username.endsWith('_')) {
+                        throw new Error(`Ungültiger Minecraft-Benutzername: '${username}' - Namen dürfen nicht mit einem Unterstrich enden.`);
+                    }
+
                     // Offizielle Mojang API: Username -> UUID
                     let mojangError = null;
                     let playerdbError = null;
@@ -466,9 +476,18 @@ export default {
 
                     // Fallback zu PlayerDB API, wenn Mojang fehlschlägt
                     try {
-                        const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(username)}`);
+                        // Konvertiere Username für URL-Encoding (falls spezielle Zeichen enthalten sind)
+                        const encodedUsername = encodeURIComponent(username);
+                        const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodedUsername}`);
+
                         if (!playerdbRes.ok) {
                             playerdbError = `PlayerDB API Fehler (Status ${playerdbRes.status})`;
+
+                            // Bei 400-Fehler könnte es ein ungültiger Name sein
+                            if (playerdbRes.status === 400) {
+                                throw new Error(`Der Minecraft-Benutzername '${username}' scheint ungültig zu sein. Bitte prüfe die Schreibweise.`);
+                            }
+
                             throw new Error(playerdbError);
                         }
 
@@ -491,8 +510,18 @@ export default {
                         ).bind(formattedUuid).first();
                         minecraftUsername = username;
                     } catch (playerdbErr) {
+                        // Wenn der Fehler speziell für ungültige Namen ist, diesen direkt weitergeben
+                        if (playerdbErr.message.includes('scheint ungültig zu sein')) {
+                            throw playerdbErr;
+                        }
+
                         // Beide APIs haben Fehler gemeldet
                         if (mojangError && playerdbError) {
+                            // Bei beiden 400/403/404-Fehlern wahrscheinlich ungültiger Name
+                            if ((mojangApiRes.status === 403 || mojangApiRes.status === 404) &&
+                                playerdbRes.status === 400) {
+                                throw new Error(`Minecraft-Benutzername '${username}' existiert nicht oder ist ungültig.`);
+                            }
                             throw new Error(`Beide APIs fehlgeschlagen - Mojang: ${mojangError}, PlayerDB: ${playerdbError}`);
                         } else if (playerdbError) {
                             throw new Error(`PlayerDB API: ${playerdbError}`);
