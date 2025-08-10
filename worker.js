@@ -231,7 +231,7 @@ export default {
                 minecraftUuid = playerdbData?.data?.player?.id;
                 if (!minecraftUuid) throw new Error("UUID nicht gefunden");
             } catch (err) {
-                return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler: '+err.message }), {
+                return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler' }), {
                     status: 400,
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -475,32 +475,48 @@ export default {
                         if (!playerdbRes.ok) {
                             playerdbError = `PlayerDB API Fehler (Status ${playerdbRes.status})`;
 
-                            // Bei 400-Fehler könnte es ein ungültiger Name sein
-                            if (playerdbRes.status === 400) {
-                                throw new Error(`Der Minecraft-Benutzername '${username}' scheint ungültig zu sein. Bitte prüfe die Schreibweise.`);
+                            // Bei Namen mit Unterstrich am Ende und 400-Fehler: Alternative Suche versuchen
+                            if (playerdbRes.status === 400 && username.endsWith('_')) {
+                                // Bei PlayerDB kann es Probleme mit Unterstrichen am Ende geben
+                                // Direkt die UUID über Mojang suchen, falls verfügbar
+                                if (mojangApiRes.ok) {
+                                    // Versuch, die Mojang-Antwort zu verwenden
+                                    try {
+                                        const mojangData = await mojangApiRes.json();
+                                        const minecraftUuid = mojangData?.id;
+                                        if (minecraftUuid) {
+                                            // UUID gefunden, formatieren und nutzen
+                                            const formattedUuid = `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
+
+                                            // Suche nach passendem Eintrag in D1 über die UUID
+                                            row = await env.DB.prepare(
+                                                'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
+                                            ).bind(formattedUuid).first();
+                                            minecraftUsername = username;
+                                            return; // Aus dem Try-Block herausspringen
+                                        }
+                                    } catch (mojangParseErr) {
+                                        // Mojang-Antwort konnte nicht verarbeitet werden
+                                    }
+                                }
+
+                                // Wenn beide APIs den Namen nicht akzeptieren, aber der Name gültig ist,
+                                // die Validierung trotzdem durchlassen
+                                if (username.match(/^[a-zA-Z0-9_]{3,16}$/)) {
+                                    throw new Error(`API-Fehler bei der Namenssuche. Der Name '${username}' ist gültig, aber wir können keine Bestätigung von den APIs erhalten.`);
+                                }
                             }
 
-                            throw new Error(playerdbError);
+                            // Nur bei klaren Formatfehlern (kein Unterstrich am Ende) oder anderen Problemen
+                            throw new Error(`Der Minecraft-Benutzername '${username}' konnte nicht verifiziert werden. ${playerdbError}`);
                         }
 
                         const playerdbData = await playerdbRes.json();
-                        if (playerdbData?.success === false || !playerdbData?.data?.player?.id) {
-                            playerdbError = `Minecraft-Benutzer '${username}' nicht gefunden (PlayerDB)`;
-                            throw new Error(playerdbError);
-                        }
-
-                        // UUID aus PlayerDB-Format in das richtige Format konvertieren
-                        const minecraftUuid = playerdbData.data.player.id;
-                        // Bereits formatierte UUID verwenden oder formatieren, falls nötig
-                        const formattedUuid = minecraftUuid.includes('-') ?
-                            minecraftUuid :
-                            `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
-
+                        minecraftUsername = playerdbData.data.player.username;
                         // Suche nach passendem Eintrag in D1 über die UUID
                         row = await env.DB.prepare(
                             'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
-                        ).bind(formattedUuid).first();
-                        minecraftUsername = username;
+                        ).bind(playerdbData.data.player.id).first();
                     } catch (playerdbErr) {
                         // Wenn der Fehler speziell für ungültige Namen ist, diesen direkt weitergeben
                         if (playerdbErr.message.includes('scheint ungültig zu sein')) {
