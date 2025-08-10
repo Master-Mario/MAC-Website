@@ -426,19 +426,23 @@ export default {
             if (username) {
                 // Suche per Minecraft-Username (Plugin-API)
                 try {
-                    // PlayerDB API: Username -> UUID
-                    const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${username}`);
-                    if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler: " + await playerdbRes.json());
-                    const playerdbData = await playerdbRes.json();
-                    const minecraftUuid = playerdbData?.data?.player?.id;
+                    // Offizielle Mojang API: Username -> UUID
+                    const mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
+                    if (!mojangApiRes.ok) throw new Error("Mojang API Fehler: " + mojangApiRes.status);
+                    const mojangData = await mojangApiRes.json();
+                    const minecraftUuid = mojangData?.id;
                     if (!minecraftUuid) throw new Error("UUID nicht gefunden");
+
+                    // UUID-Format formatieren (mit Bindestrichen für DB-Speicherung)
+                    const formattedUuid = `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
+
                     // Suche nach passendem Eintrag in D1 über die UUID
                     row = await env.DB.prepare(
                         'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
-                    ).bind(minecraftUuid).first;
+                    ).bind(formattedUuid).first();
                     minecraftUsername = username;
                 } catch (err) {
-                    return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder PlayerDB API Fehler: ' + err.message }), {
+                    return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder Mojang API Fehler: ' + err.message }), {
                         status: 400,
                         headers: { 'Content-Type': 'application/json' }
                     });
