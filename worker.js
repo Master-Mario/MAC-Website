@@ -427,8 +427,8 @@ export default {
                 // Suche per Minecraft-Username (Plugin-API)
                 try {
                     // Offizielle Mojang API: Username -> UUID
-                    const mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
-                    if (!mojangApiRes.ok) throw new Error("Mojang API Fehler: " + mojangApiRes.url + " " + mojangApiRes.app);
+                    const mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`).catch(error => console.log(error));
+                    if (!mojangApiRes.ok) throw new Error("Mojang API Fehler: " + mojangApiRes.url);
                     const mojangData = await mojangApiRes.json();
                     const minecraftUuid = mojangData?.id;
                     if (!minecraftUuid) throw new Error("UUID nicht gefunden");
