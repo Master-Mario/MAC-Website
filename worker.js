@@ -427,14 +427,7 @@ export default {
                 // Suche per Minecraft-Username (Plugin-API)
                 try {
                     // Validiere zuerst den Minecraft-Benutzernamen auf gültige Zeichen
-                    // Erlaubte Zeichen: a-z, A-Z, 0-9 und Unterstrich, aber nur wenn nicht am Ende
-                    if (!/^[a-zA-Z0-9_]{3,16}$/.test(username)) {
-                        throw new Error(`Ungültiger Minecraft-Benutzername (Format): '${username}' - Namen müssen 3-16 Zeichen lang sein und dürfen nur Buchstaben, Zahlen und Unterstriche enthalten.`);
-                    }
-
-                    if (username.endsWith('_')) {
-                        throw new Error(`Ungültiger Minecraft-Benutzername: '${username}' - Namen dürfen nicht mit einem Unterstrich enden.`);
-                    }
+                    // Erlaubte Zeichen: a-z, A-Z, 0-9 und Unterstrich
 
                     // Offizielle Mojang API: Username -> UUID
                     let mojangError = null;
