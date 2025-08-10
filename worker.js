@@ -434,6 +434,33 @@ export default {
                         throw new Error(`Minecraft-Benutzer '${username}' nicht gefunden`);
                     }
 
+                    // Bei Fehler 403 (Forbidden) - versuche es mit der PlayerDB API als Fallback
+                    if (mojangApiRes.status === 403) {
+                        // PlayerDB API als Fallback verwenden
+                        const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(username)}`);
+                        if (!playerdbRes.ok) {
+                            throw new Error("Beide APIs (Mojang und PlayerDB) melden Fehler");
+                        }
+                        const playerdbData = await playerdbRes.json();
+                        if (playerdbData?.success === false || !playerdbData?.data?.player?.id) {
+                            throw new Error(`Minecraft-Benutzer '${username}' nicht gefunden (Fallback-API)`);
+                        }
+
+                        // UUID aus PlayerDB-Format in das richtige Format konvertieren
+                        const minecraftUuid = playerdbData.data.player.id;
+                        // Bereits formatierte UUID verwenden oder formatieren, falls nötig
+                        const formattedUuid = minecraftUuid.includes('-') ?
+                            minecraftUuid :
+                            `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
+
+                        // Suche nach passendem Eintrag in D1 über die UUID
+                        row = await env.DB.prepare(
+                            'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
+                        ).bind(formattedUuid).first();
+                        minecraftUsername = username;
+                        return; // Aus dem Try-Block herausspringen
+                    }
+
                     // Bei anderen Fehlern einen generellen API-Fehler ausgeben
                     if (!mojangApiRes.ok) {
                         throw new Error(`Mojang API Fehler (Status ${mojangApiRes.status}): ${mojangApiRes.url}`);
