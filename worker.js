@@ -427,23 +427,55 @@ export default {
                 // Suche per Minecraft-Username (Plugin-API)
                 try {
                     // Offizielle Mojang API: Username -> UUID
+                    let mojangError = null;
+                    let playerdbError = null;
+
                     const mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
 
                     // Status-Code 204 oder 404 bedeutet, dass der Benutzer nicht existiert
                     if (mojangApiRes.status === 204 || mojangApiRes.status === 404) {
-                        throw new Error(`Minecraft-Benutzer '${username}' nicht gefunden`);
+                        mojangError = `Minecraft-Benutzer '${username}' nicht gefunden (Mojang)`;
+                    }
+                    // Bei Fehler 403 (Forbidden) oder anderen Fehlern - Fehler für späteren Fallback speichern
+                    else if (!mojangApiRes.ok) {
+                        mojangError = `Mojang API Fehler (Status ${mojangApiRes.status})`;
                     }
 
-                    // Bei Fehler 403 (Forbidden) - versuche es mit der PlayerDB API als Fallback
-                    if (mojangApiRes.status === 403) {
-                        // PlayerDB API als Fallback verwenden
+                    // Wenn Mojang API erfolgreich war, nutze diese
+                    if (!mojangError) {
+                        try {
+                            const mojangData = await mojangApiRes.json();
+                            const minecraftUuid = mojangData?.id;
+                            if (!minecraftUuid) {
+                                mojangError = "UUID nicht in Mojang-Antwort gefunden";
+                            } else {
+                                // UUID-Format formatieren (mit Bindestrichen für DB-Speicherung)
+                                const formattedUuid = `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
+
+                                // Suche nach passendem Eintrag in D1 über die UUID
+                                row = await env.DB.prepare(
+                                    'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
+                                ).bind(formattedUuid).first();
+                                minecraftUsername = username;
+                                return; // Aus dem Try-Block herausspringen, wenn Mojang erfolgreich war
+                            }
+                        } catch (jsonErr) {
+                            mojangError = `Fehler beim Parsen der Mojang-Antwort: ${jsonErr.message}`;
+                        }
+                    }
+
+                    // Fallback zu PlayerDB API, wenn Mojang fehlschlägt
+                    try {
                         const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(username)}`);
                         if (!playerdbRes.ok) {
-                            throw new Error("Beide APIs (Mojang und PlayerDB) melden Fehler");
+                            playerdbError = `PlayerDB API Fehler (Status ${playerdbRes.status})`;
+                            throw new Error(playerdbError);
                         }
+
                         const playerdbData = await playerdbRes.json();
                         if (playerdbData?.success === false || !playerdbData?.data?.player?.id) {
-                            throw new Error(`Minecraft-Benutzer '${username}' nicht gefunden (Fallback-API)`);
+                            playerdbError = `Minecraft-Benutzer '${username}' nicht gefunden (PlayerDB)`;
+                            throw new Error(playerdbError);
                         }
 
                         // UUID aus PlayerDB-Format in das richtige Format konvertieren
@@ -458,29 +490,20 @@ export default {
                             'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
                         ).bind(formattedUuid).first();
                         minecraftUsername = username;
-                        return; // Aus dem Try-Block herausspringen
+                    } catch (playerdbErr) {
+                        // Beide APIs haben Fehler gemeldet
+                        if (mojangError && playerdbError) {
+                            throw new Error(`Beide APIs fehlgeschlagen - Mojang: ${mojangError}, PlayerDB: ${playerdbError}`);
+                        } else if (playerdbError) {
+                            throw new Error(`PlayerDB API: ${playerdbError}`);
+                        }
                     }
 
-                    // Bei anderen Fehlern einen generellen API-Fehler ausgeben
-                    if (!mojangApiRes.ok) {
-                        throw new Error(`Mojang API Fehler (Status ${mojangApiRes.status}): ${mojangApiRes.url}`);
-                    }
-
-                    // Antwort parsen
-                    const mojangData = await mojangApiRes.json();
-                    const minecraftUuid = mojangData?.id;
-                    if (!minecraftUuid) throw new Error("UUID nicht gefunden");
-
-                    // UUID-Format formatieren (mit Bindestrichen für DB-Speicherung)
-                    const formattedUuid = `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
-
-                    // Suche nach passendem Eintrag in D1 über die UUID
-                    row = await env.DB.prepare(
-                        'SELECT * FROM payment_setups WHERE minecraft_uuid = ?'
-                    ).bind(formattedUuid).first();
-                    minecraftUsername = username;
                 } catch (err) {
-                    return new Response(JSON.stringify({ error: 'Ungültiger Minecraft Username oder Mojang API Fehler: ' + err.message }), {
+                    return new Response(JSON.stringify({
+                        error: 'Ungültiger Minecraft Username oder API Fehler: ' + err.message,
+                        username: username
+                    }), {
                         status: 400,
                         headers: { 'Content-Type': 'application/json' }
                     });
