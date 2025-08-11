@@ -501,14 +501,14 @@ export default {
 
                     // Wenn nach beiden Versuchen keine Zeile gefunden wurde, einen Fehler auslösen
                     if (!row) {
-                         // Wenn beide APIs Fehler zurückgeben, aber der Name syntaktisch gültig ist
-                        if (username.match(/^[a-zA-Z0-9_]{3,16}$/)) {
-                             throw new Error(`API-Dienste sind derzeit nicht erreichbar. Der Name '${username}' scheint syntaktisch korrekt zu sein, aber wir konnten ihn nicht validieren. Bitte versuchen Sie es später erneut.`);
-                        }
-
                         let errorMessages = [];
                         if (playerdbError) errorMessages.push(`PlayerDB: ${playerdbError}`);
                         if (mojangError) errorMessages.push(`Mojang: ${mojangError}`);
+
+                        // Wenn beide APIs Fehler zurückgeben, aber der Name syntaktisch gültig ist
+                        if (username.match(/^[a-zA-Z0-9_]{3,16}$/) && errorMessages.length > 0) {
+                             throw new Error(`API-Dienste sind derzeit nicht erreichbar. Der Name '${username}' scheint syntaktisch korrekt zu sein, aber wir konnten ihn nicht validieren. Details: ${errorMessages.join(', ')}. Bitte versuchen Sie es später erneut.`);
+                        }
 
                         if (errorMessages.length > 0) {
                             throw new Error(`Der Minecraft-Benutzername '${username}' konnte nicht verifiziert werden. Details: ${errorMessages.join(', ')}`);
