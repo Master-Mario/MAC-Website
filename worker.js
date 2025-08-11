@@ -518,17 +518,18 @@ export default {
                 });
             }
             // Hole Minecraft-Username von PlayerDB API (nur wenn nicht schon gesetzt)
-            if (minecraftUsername && (!username || minecraftUsername !== username)) {
+            if (minecraftUsername) { // Vereinfachte Prüfung: wenn eine UUID da ist, versuche sie aufzulösen
                 try {
+                    // PlayerDB kann UUIDs direkt auflösen
                     const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${minecraftUsername}`);
                     if (playerdbRes.ok) {
                         const playerdbData = await playerdbRes.json();
-                        if (playerdbData && playerdbData.data && playerdbData.data.player && playerdbData.data.player.username) {
+                        if (playerdbData?.success && playerdbData.data?.player?.username) {
                             minecraftUsername = playerdbData.data.player.username;
                         }
                     }
                 } catch (err) {
-                    // Fallback: UUID anzeigen
+                    // Fallback: UUID anzeigen, wenn die API fehlschlägt
                 }
             }
             // amount: Serverkosten geteilt durch Anzahl aktiver Nutzer
