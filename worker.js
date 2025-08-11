@@ -521,7 +521,13 @@ export default {
             if (minecraftUsername) { // Vereinfachte Prüfung: wenn eine UUID da ist, versuche sie aufzulösen
                 try {
                     // PlayerDB kann UUIDs direkt auflösen
-                    const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${minecraftUsername}`);
+                    const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraftUsername)}`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+                        }
+                    });
                     if (playerdbRes.ok) {
                         const playerdbData = await playerdbRes.json();
                         if (playerdbData?.success && playerdbData.data?.player?.username) {
