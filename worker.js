@@ -470,7 +470,7 @@ export default {
                     if (!row) {
                         let mojangApiRes;
                         try {
-                            mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(username)}`, {
+                            mojangApiRes = await fetch(`https://api.minecraftservices.com/minecraft/profile/lookup/name/${encodeURIComponent(username)}`, {
                                 method: 'GET',
                                 headers: {
                                     'Accept': 'application/json',
@@ -484,7 +484,7 @@ export default {
                                     const minecraftUuid = mojangData.id;
                                     const formattedUuid = `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
 
-                                    minecraftUsername = username; // Mojang gibt den korrekten Namen nicht zurück, also verwenden wir den Input
+                                    minecraftUsername = mojangData.name; // Verwende den korrekten Namen aus der API-Antwort
                                     row = await env.DB.prepare('SELECT * FROM payment_setups WHERE minecraft_uuid = ?').bind(formattedUuid).first();
                                 } else {
                                     mojangError = "UUID nicht in Mojang-Antwort gefunden";
