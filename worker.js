@@ -437,7 +437,10 @@ export default {
                         const encodedUsername = encodeURIComponent(username);
                         const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodedUsername}`, {
                             method: 'GET',
-                            headers: { 'Accept': 'application/json' }
+                            headers: {
+                                'Accept': 'application/json',
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+                            }
                         });
 
                         if (playerdbRes.ok) {
@@ -474,7 +477,7 @@ export default {
                                 method: 'GET',
                                 headers: {
                                     'Accept': 'application/json',
-                                    'User-Agent': 'MAC-Website-Worker'
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
                                 }
                             });
 
