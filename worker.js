@@ -429,7 +429,6 @@ export default {
                     // Validiere zuerst den Minecraft-Benutzernamen auf gültige Zeichen
 
                     // Offizielle Mojang API: Username -> UUID
-                    let mojangError = null;
                     let playerdbError = null;
 
                     // Wechsle die Reihenfolge: Beginne mit PlayerDB, da es zuverlässiger zu sein scheint
@@ -468,45 +467,10 @@ export default {
                         playerdbError = `Fehler bei der PlayerDB API-Anfrage: ${err.message}`;
                     }
 
-
-                    // Fallback zu Mojang API, wenn PlayerDB fehlschlägt und `row` noch nicht gesetzt ist
-                    if (!row) {
-                        let mojangApiRes;
-                        try {
-                            mojangApiRes = await fetch(`https://api.minecraftservices.com/minecraft/profile/lookup/name/${encodeURIComponent(username)}`, {
-                                method: 'GET',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
-                                }
-                            });
-
-                            if (mojangApiRes.ok) {
-                                const mojangData = await mojangApiRes.json();
-                                if (mojangData?.id) {
-                                    const minecraftUuid = mojangData.id;
-                                    const formattedUuid = `${minecraftUuid.substring(0, 8)}-${minecraftUuid.substring(8, 12)}-${minecraftUuid.substring(12, 16)}-${minecraftUuid.substring(16, 20)}-${minecraftUuid.substring(20)}`;
-
-                                    minecraftUsername = mojangData.name; // Verwende den korrekten Namen aus der API-Antwort
-                                    row = await env.DB.prepare('SELECT * FROM payment_setups WHERE minecraft_uuid = ?').bind(formattedUuid).first();
-                                } else {
-                                    mojangError = "UUID nicht in Mojang-Antwort gefunden";
-                                }
-                            } else if (mojangApiRes.status === 204 || mojangApiRes.status === 404) {
-                                mojangError = `Minecraft-Benutzer '${username}' nicht gefunden (Mojang)`;
-                            } else {
-                                mojangError = `Mojang API Fehler (Status ${mojangApiRes.status})`;
-                            }
-                        } catch (fetchErr) {
-                            mojangError = `Netzwerkfehler bei der Mojang API-Anfrage: ${fetchErr.message}`;
-                        }
-                    }
-
                     // Wenn nach beiden Versuchen keine Zeile gefunden wurde, einen Fehler auslösen
                     if (!row) {
                         let errorMessages = [];
                         if (playerdbError) errorMessages.push(`PlayerDB: ${playerdbError}`);
-                        if (mojangError) errorMessages.push(`Mojang: ${mojangError}`);
 
                         // Wenn beide APIs Fehler zurückgeben, aber der Name syntaktisch gültig ist
                         if (username.match(/^[a-zA-Z0-9_]{3,16}$/) && errorMessages.length > 0) {
