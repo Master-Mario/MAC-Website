@@ -225,7 +225,13 @@ export default {
             // PlayerDB API: Username -> UUID
             let minecraftUuid;
             try {
-                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraftUsername)}`);
+                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraftUsername)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+                    }
+                });
                 if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler");
                 const playerdbData = await playerdbRes.json();
                 minecraftUuid = playerdbData?.data?.player?.id;
@@ -859,7 +865,13 @@ export default {
             // PlayerDB API: Username -> UUID
             let minecraftUuid;
             try {
-                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraftUsername)}`);
+                const playerdbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(minecraftUsername)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+                    }
+                });
                 if (!playerdbRes.ok) throw new Error("PlayerDB API Fehler");
                 const playerdbData = await playerdbRes.json();
                 minecraftUuid = playerdbData?.data?.player?.id;
