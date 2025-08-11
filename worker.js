@@ -472,7 +472,10 @@ export default {
                         try {
                             mojangApiRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(username)}`, {
                                 method: 'GET',
-                                headers: { 'Accept': 'application/json' }
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'User-Agent': 'MAC-Website-Worker'
+                                }
                             });
 
                             if (mojangApiRes.ok) {
