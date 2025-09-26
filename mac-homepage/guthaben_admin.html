@@ -236,7 +236,6 @@
         <div class="tab-container">
             <button class="tab active" data-tab="guthaben">Guthaben setzen</button>
             <button class="tab" data-tab="codes">Guthabencodes</button>
-            <button class="tab" data-tab="schulden">Schulden-Übersicht</button>
         </div>
 
         <div id="guthaben-tab" class="tab-content active">
@@ -273,16 +272,6 @@
             <table id="codesTable">
                 <thead>
                     <tr><th>Code</th><th>Betrag (€)</th><th>Erstellt am</th></tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
-        <div id="schulden-tab" class="tab-content">
-            <h2>Alle User mit Schulden ≠ 0</h2>
-            <table class="guthaben-table" id="schuldenTable">
-                <thead>
-                    <tr><th>E-Mail</th><th>Minecraft Username</th><th>Schulden (€)</th><th>Guthaben (€)</th><th>Zahlungsmethode</th></tr>
                 </thead>
                 <tbody></tbody>
             </table>
@@ -412,54 +401,6 @@
             msg.className = 'msg error';
         }
     };
-
-    // Schulden-Funktionalität
-    async function ladeSchulden() {
-        const table = document.getElementById('schuldenTable');
-        const tbody = table.querySelector('tbody');
-        tbody.innerHTML = '';
-
-        try {
-            const res = await fetch('/api/admin/schulden', { credentials: 'include' });
-            if (res.ok) {
-                const data = await res.json();
-                data.forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${row.email}</td>
-                        <td>${row.minecraft_username || '-'}</td>
-                        <td>${(row.schulden || 0).toFixed(2).replace('.', ',')} €</td>
-                        <td>${(row.guthaben || 0).toFixed(2).replace('.', ',')} €</td>
-                        <td>${row.zahlungsmethode || '-'}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5">Fehler beim Laden</td></tr>';
-            }
-        } catch (err) {
-            tbody.innerHTML = '<tr><td colspan="5">Netzwerkfehler</td></tr>';
-        }
-    }
-
-    // Event-Listener für Tab-Wechsel mit Daten laden
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabName = tab.dataset.tab;
-            if (tabName === 'guthaben') {
-                ladeGuthaben();
-            } else if (tabName === 'codes') {
-                ladeCodes();
-            } else if (tabName === 'schulden') {
-                ladeSchulden();
-            }
-        });
-    });
-
-    // Initial load
-    ladeGuthaben();
-    ladeCodes();
-    ladeSchulden();
     </script>
 </body>
 </html>
