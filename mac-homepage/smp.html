@@ -47,7 +47,12 @@
                 <div class="user-info" id="userInfo" style="display: none;">
                     <img src="" alt="Avatar" class="avatar" id="userAvatar">
                     <span class="username" id="userName"></span>
-                    <!-- Logout-Button entfernt, Dropdown übernimmt Logout -->
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="abo.html">Mein Abo</a>
+                        <a href="schulden.html">Meine Schulden</a>
+                        <a href="profile.html">Profil</a>
+                        <button id="logoutBtn">Logout</button>
+                    </div>
                 </div>
             </div>
             <!-- Auth Section End -->
@@ -163,16 +168,10 @@
                 </div>
 
                 <div class="form-group">
-                    <h3>Zahlungsinformationen & Kostenmodell</h3>
-                    <p>Die monatlichen Serverkosten werden am Monatsende durch die Anzahl der registrierten Nutzer geteilt. Jeder zahlt denselben Anteil. Beispiel: Wenn 3 Nutzer registriert sind, zahlt jeder ein Drittel der Serverkosten. Du zahlst immer deinen Anteil entsprechend der Anzahl der registrierten Nutzer.</p>
-                    <!-- Nachrichten-Div für Stripe-Feedback -->
+                    <h3>Kostenmodell</h3>
+                    <p>Die monatlichen Serverkosten werden am Monatsende durch die Anzahl der registrierten Nutzer geteilt. Jeder zahlt denselben Anteil. Du bekommst jeden Monat Schulden entsprechend deinem Anteil, die du später über dein Profil begleichen kannst.</p>
+                    <!-- Nachrichten-Div für Feedback -->
                     <div id="payment-message" class="payment-message" style="margin-top: 10px;"></div>
-                </div>
-
-                <div class="form-group">
-                    <label>Zahlungsmethode wählen:</label><br>
-                    <label><input type="radio" name="zahlungsmethode" value="guthaben" id="zahlungGuthaben"> Guthaben (sofort, keine Karte nötig)</label><br>
-                    <label><input type="radio" name="zahlungsmethode" value="stripe" id="zahlungStripe" checked> Stripe/Kreditkarte (empfohlen)</label>
                 </div>
 
                 <div class="form-group checkbox">
@@ -180,7 +179,7 @@
                     <label for="agb">Ich stimme den <a href="agb.html" target="_blank">AGB</a> und der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a> zu.</label>
                 </div>
 
-                <button type="submit" class="btn btn-primary">Jetzt kostenpflichtig für MAC-SMP registrieren</button>
+                <button type="submit" class="btn btn-primary">Jetzt für MAC-SMP registrieren</button>
             </form>
         </div>
     </section>

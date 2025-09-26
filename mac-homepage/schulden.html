@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meine Schulden | MAC-Netzwerk</title>
+    <link rel="icon" type="image/png" href="logos/favicon-32x32.png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .schulden-hero {
+            min-height: 70vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            animation: fadeInUp 1s;
+        }
+        .schulden-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 18px;
+            padding: 2.5rem 2.5rem 2rem 2.5rem;
+            margin: 2rem auto 0 auto;
+            border: 1.5px solid rgba(255,0,35,0.22);
+            box-shadow: 0 8px 32px rgba(255,0,35,0.10);
+            animation: fadeInUp 1.2s 0.2s both;
+            max-width: 520px;
+        }
+        .schulden-card h2 {
+            color: #ff0023;
+            margin-bottom: 1.2rem;
+            font-size: 2rem;
+        }
+        .schulden-details {
+            margin-bottom: 1.5rem;
+        }
+        .schulden-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.1rem;
+            font-size: 1.08rem;
+            gap: 1.5rem;
+        }
+        .schulden-label {
+            color: #cccccc;
+        }
+        .schulden-value {
+            color: #fff;
+            font-weight: 500;
+        }
+        .schulden-amount {
+            display: inline-block;
+            padding: 0.6rem 1.5rem;
+            border-radius: 20px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            background: rgba(255, 71, 87, 0.18);
+            color: #ff4757;
+            border: 1px solid #ff4757;
+            margin-bottom: 1.5rem;
+            animation: pulseGlow 2s infinite ease-in-out;
+        }
+        .schulden-amount.zero {
+            background: rgba(46, 213, 115, 0.18);
+            color: #2ed573;
+            border: 1px solid #2ed573;
+            animation: none;
+        }
+        .schulden-actions {
+            margin-top: 2.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            align-items: center;
+            animation: fadeInUp 1s 0.4s both;
+        }
+        .btn-pay-guthaben {
+            background: linear-gradient(135deg, #2ed573, #17c0eb);
+            color: #fff;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(46, 213, 115, 0.3);
+            animation: slideInLeft 0.8s ease-out;
+        }
+        .btn-pay-guthaben:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(46, 213, 115, 0.4);
+        }
+        .btn-pay-guthaben:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 4px 20px rgba(46, 213, 115, 0.1);
+        }
+        .btn-pay-stripe {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            animation: slideInRight 0.8s ease-out;
+        }
+        .btn-pay-stripe:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+        }
+        .btn-pay-stripe:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+        }
+        .payment-message {
+            margin-top: 1rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+            animation: fadeIn 0.5s ease-in;
+        }
+        .payment-message.success {
+            background: rgba(46, 213, 115, 0.1);
+            color: #2ed573;
+            border: 1px solid rgba(46, 213, 115, 0.3);
+        }
+        .payment-message.error {
+            background: rgba(255, 71, 87, 0.1);
+            color: #ff4757;
+            border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 71, 87, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(255, 71, 87, 0.6); }
+        }
+        @keyframes slideInLeft {
+            from { 
+                transform: translateX(-50px); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateX(0); 
+                opacity: 1; 
+            }
+        }
+        @keyframes slideInRight {
+            from { 
+                transform: translateX(50px); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateX(0); 
+                opacity: 1; 
+            }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+        @media (max-width: 700px) {
+            .schulden-card { 
+                padding: 2rem 1.5rem; 
+                margin: 1rem;
+            }
+            .schulden-row { 
+                flex-direction: column; 
+                gap: 0.5rem; 
+            }
+            .btn-pay-guthaben, .btn-pay-stripe {
+                width: 100%;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav id="navbar">
+        <div class="nav-container">
+            <a href="https://mac-netzwerk.net" class="logo">MAC-Netzwerk</a>
+            <ul class="nav-links">
+                <li><a href="index.html#home">Home</a></li>
+                <li><a href="index.html#server">Server</a></li>
+                <li><a href="https://mac-netzwerk.net/smp#regeln">Regeln</a></li>
+                <li><a href="https://mac-netzwerk.net/smp#mac-smp-registrierung">MAC-SMP Registrierung</a></li>
+                <li><a href="https://mac-netzwerk.net/status">Status</a></li>
+                <li><a href="index.html#kontakt">Kontakt</a></li>
+                <li><a href="index.html#impressum">Impressum</a></li>
+                <li><a href="https://panel.mac-netzwerk.net/">Panel</a></li>
+            </ul>
+            <!-- Auth Section Start -->
+            <div class="auth-section">
+                <!-- Logged out state -->
+                <a href="https://mac-netzwerk.net/login" class="btn-discord-login" id="discordLoginBtn" style="display: none;">
+                    <img src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d7f4ef6498ac018f2c55_Symbol.svg" alt="Discord Logo" width="20" height="20">
+                    Login mit Discord
+                </a>
+                <!-- Logged in state (initially hidden) -->
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <img src="" alt="Avatar" class="avatar" id="userAvatar">
+                    <span class="username" id="userName"></span>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="abo.html">Mein Abo</a>
+                        <a href="schulden.html">Meine Schulden</a>
+                        <a href="profile.html">Profil</a>
+                        <button id="logoutBtn">Logout</button>
+                    </div>
+                </div>
+            </div>
+            <div class="mobile-menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+    <section class="schulden-hero">
+        <div class="schulden-card" id="schuldenCard">
+            <h2>MAC-SMP Schulden</h2>
+            <div id="schuldenAmount" class="schulden-amount">Lade Daten...</div>
+            <div class="schulden-details">
+                <div class="schulden-row"><span class="schulden-label">Guthaben:</span><span class="schulden-value" id="guthabenAmount">-</span></div>
+                <div class="schulden-row"><span class="schulden-label">Minecraft Username:</span><span class="schulden-value" id="mcUsername">-</span></div>
+                <div class="schulden-row"><span class="schulden-label">Registriert seit:</span><span class="schulden-value" id="registriertSeit">-</span></div>
+                <div class="schulden-row"><span class="schulden-label">E-Mail:</span><span class="schulden-value" id="userEmail">-</span></div>
+            </div>
+            <div class="schulden-actions" id="schuldenActions" style="display:none;">
+                <button class="btn-pay-guthaben" id="payWithGuthabenBtn">Mit Guthaben bezahlen</button>
+                <button class="btn-pay-stripe" id="payWithStripeBtn">Schulden mit Karte begleichen</button>
+            </div>
+            <div id="paymentMessage" class="payment-message" style="display: none;"></div>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+    <script>
+        // Debt management functionality
+        document.addEventListener('DOMContentLoaded', async function() {
+            const schuldenAmount = document.getElementById('schuldenAmount');
+            const guthabenAmount = document.getElementById('guthabenAmount');
+            const mcUsername = document.getElementById('mcUsername');
+            const registriertSeit = document.getElementById('registriertSeit');
+            const userEmail = document.getElementById('userEmail');
+            const schuldenActions = document.getElementById('schuldenActions');
+            const payWithGuthabenBtn = document.getElementById('payWithGuthabenBtn');
+            const payWithStripeBtn = document.getElementById('payWithStripeBtn');
+            const paymentMessage = document.getElementById('paymentMessage');
+
+            // Check for payment status in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('payment_success')) {
+                paymentMessage.textContent = 'Zahlung erfolgreich! Deine Schulden wurden beglichen.';
+                paymentMessage.className = 'payment-message success';
+                paymentMessage.style.display = 'block';
+                // Remove URL parameter
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            if (urlParams.has('payment_cancelled')) {
+                paymentMessage.textContent = 'Die Zahlung wurde abgebrochen.';
+                paymentMessage.className = 'payment-message error';
+                paymentMessage.style.display = 'block';
+                // Remove URL parameter
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // Load debt status
+            try {
+                const res = await fetch('/api/schulden-status', { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // Update UI
+                    const schulden = parseFloat(data.schulden || 0);
+                    const guthaben = parseFloat(data.guthaben || 0);
+                    
+                    schuldenAmount.textContent = schulden > 0 ? `${schulden.toFixed(2)} €` : '0,00 €';
+                    schuldenAmount.className = schulden > 0 ? 'schulden-amount' : 'schulden-amount zero';
+                    
+                    guthabenAmount.textContent = `${guthaben.toFixed(2)} €`;
+                    mcUsername.textContent = data.minecraft_username || '-';
+                    registriertSeit.textContent = data.created_at ? new Date(data.created_at).toLocaleDateString('de-DE') : '-';
+                    userEmail.textContent = data.email || '-';
+                    
+                    // Show actions if there are debts
+                    if (schulden > 0) {
+                        schuldenActions.style.display = 'flex';
+                        
+                        // Enable/disable guthaben button based on balance
+                        if (guthaben <= 0) {
+                            payWithGuthabenBtn.disabled = true;
+                            payWithGuthabenBtn.textContent = 'Kein Guthaben verfügbar';
+                        }
+                    }
+                } else {
+                    schuldenAmount.textContent = 'Fehler beim Laden';
+                    schuldenAmount.className = 'schulden-amount error';
+                }
+            } catch (err) {
+                schuldenAmount.textContent = 'Nicht eingeloggt';
+                schuldenAmount.className = 'schulden-amount error';
+            }
+
+            // Pay with balance button
+            payWithGuthabenBtn.addEventListener('click', async function() {
+                paymentMessage.style.display = 'none';
+                payWithGuthabenBtn.disabled = true;
+                payWithGuthabenBtn.textContent = 'Bearbeite...';
+                
+                try {
+                    const res = await fetch('/api/schulden-mit-guthaben-bezahlen', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (res.ok && data.success) {
+                        paymentMessage.textContent = data.message || 'Zahlung erfolgreich!';
+                        paymentMessage.className = 'payment-message success';
+                        paymentMessage.style.display = 'block';
+                        
+                        // Reload page after 2 seconds
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        paymentMessage.textContent = data.error || 'Fehler bei der Zahlung';
+                        paymentMessage.className = 'payment-message error';
+                        paymentMessage.style.display = 'block';
+                    }
+                } catch (err) {
+                    paymentMessage.textContent = 'Netzwerkfehler: ' + err.message;
+                    paymentMessage.className = 'payment-message error';
+                    paymentMessage.style.display = 'block';
+                } finally {
+                    payWithGuthabenBtn.disabled = false;
+                    payWithGuthabenBtn.textContent = 'Mit Guthaben bezahlen';
+                }
+            });
+
+            // Pay with Stripe button
+            payWithStripeBtn.addEventListener('click', async function() {
+                paymentMessage.style.display = 'none';
+                payWithStripeBtn.disabled = true;
+                payWithStripeBtn.textContent = 'Erstelle Zahlung...';
+                
+                try {
+                    const res = await fetch('/api/schulden-stripe-session', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (res.ok && data.url) {
+                        window.location.href = data.url;
+                    } else {
+                        paymentMessage.textContent = data.error || 'Fehler beim Erstellen der Zahlungsseite';
+                        paymentMessage.className = 'payment-message error';
+                        paymentMessage.style.display = 'block';
+                    }
+                } catch (err) {
+                    paymentMessage.textContent = 'Netzwerkfehler: ' + err.message;
+                    paymentMessage.className = 'payment-message error';
+                    paymentMessage.style.display = 'block';
+                } finally {
+                    payWithStripeBtn.disabled = false;
+                    payWithStripeBtn.textContent = 'Schulden mit Karte begleichen';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
