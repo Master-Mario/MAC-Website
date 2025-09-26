@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 // --- Auth Script End ---
 
-// --- Registration Script Start ---
+// --- Stripe Payment Script Start ---
 document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const paymentMessage = document.getElementById('payment-message');
@@ -407,6 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const minecraftUsername = document.getElementById('minecraftUsername').value;
             const agbChecked = document.getElementById('agb').checked;
+            const payWithGuthaben = document.getElementById('payWithGuthaben')?.checked;
+
+            // Neue Logik: Zahlungsmethode auslesen
+            const zahlungsmethode = document.querySelector('input[name="zahlungsmethode"]:checked')?.value || 'stripe';
 
             if (!agbChecked) {
                 paymentMessage.textContent = 'Bitte stimme den AGB und der Datenschutzerklärung zu.';
@@ -419,27 +423,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                // Direct registration without payment setup
-                const response = await fetch('/api/register-direct', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ minecraftUsername })
-                });
-                const data = await response.json();
-                if (response.ok && data.success) {
-                    paymentMessage.textContent = 'Erfolgreich registriert! Du bist jetzt freigeschaltet.';
-                    paymentMessage.style.color = '#2ed573';
-                } else {
-                    paymentMessage.textContent = data.error || 'Registrierung fehlgeschlagen.';
-                    paymentMessage.style.color = '#ff4757';
+                if (zahlungsmethode === 'guthaben') {
+                    // Registrierung mit Guthaben
+                    const response = await fetch('/api/register-guthaben', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ minecraftUsername, zahlungsmethode })
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                        paymentMessage.textContent = 'Erfolgreich mit Guthaben registriert! Du bist jetzt freigeschaltet.';
+                    } else {
+                        paymentMessage.textContent = data.error || 'Registrierung mit Guthaben fehlgeschlagen.';
+                    }
+                    return;
                 }
-            } catch (error) {
-                paymentMessage.textContent = 'Fehler bei der Registrierung: ' + error.message;
-                paymentMessage.style.color = '#ff4757';
-            }
-        });
-    }
-});
+
+                // 1. Create a checkout session auf dem Server
+                const response = await fetch('/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ minecraftUsername, zahlungsmethode }),
+                });
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -448,7 +455,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-// --- Registration Script End ---
+                const sessionData = await response.json();
+                if (!sessionData.url) {
+                    paymentMessage.textContent = 'Fehler: Keine URL für die Bezahlseite erhalten.';
+                    return;
+                }
+                // 2. Redirect to the Stripe Checkout page
+                window.location.href = sessionData.url;
+
+            } catch (error) {
+                paymentMessage.textContent = 'Ein unerwarteter Fehler ist aufgetreten.';
+                console.error('Client-side error:', error);
+            }
+        });
+    }
+
+    // Handle payment status messages from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('payment_success')) {
+        paymentMessage.style.color = 'green';
+        paymentMessage.textContent = 'Zahlung erfolgreich! Du wirst in Kürze für den Server freigeschaltet.';
+    }
+    if (urlParams.has('payment_cancelled')) {
+        paymentMessage.style.color = 'orange';
+        paymentMessage.textContent = 'Die Zahlung wurde abgebrochen. Bitte versuche es erneut.';
+    }
+});
+// --- Stripe Payment Script End ---
 
 // --- Cookie Banner Script ---
 document.addEventListener('DOMContentLoaded', function() {
@@ -592,8 +625,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 let paymentMethod = '-';
                 if (abo.stripe_id && abo.stripe_id !== '' && abo.active) {
                     paymentMethod = 'Stripe';
-                } else if (abo.zahlungsmethode === 'debt' && abo.active) {
-                    paymentMethod = 'Schulden-System';
                 } else if ((!abo.stripe_id || abo.stripe_id === '') && abo.active) {
                     paymentMethod = 'Guthaben';
                 } else if (!abo.active) {
