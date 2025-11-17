@@ -38,180 +38,85 @@ function fetchMinecraftServerStatus() {
     const playersMax = document.getElementById('serverPlayersMax');
     const playerListContainer = document.getElementById('playerListContainer');
 
-    // Server-IP und Port
-    const serverAddress = 'mac-netzwerk.net';
-    const serverPort = 25565;
-
-    // Offizielle Minecraft-Server Status API
-    fetch(`https://api.minecraft.net/v1/server/status`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            address: serverAddress,
-            port: serverPort
-        })
-    })
-    .then(response => {
-        // Fallback zur mcsrvstat.us API falls Mojang API Fehler zurückgibt
-        if (!response.ok) {
-            throw new Error('Mojang API nicht erreichbar');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data && data.online) {
-            statusText.textContent = `Online`;
-            statusText.style.color = '#27c93f';
-            if (statusIndicator) {
-                statusIndicator.style.display = 'inline-block';
-                statusIndicator.style.background = '#27c93f';
-                statusIndicator.style.boxShadow = '0 0 10px #27c93f';
-                statusIndicator.style.width = '12px';
-                statusIndicator.style.height = '12px';
-                statusIndicator.style.borderRadius = '50%';
-                statusIndicator.style.marginRight = '8px';
-            }
-            if (playersOnline && playersMax) {
-                playersOnline.textContent = data.players && typeof data.players.online === 'number' ? data.players.online : '?';
-                playersMax.textContent = data.players && typeof data.players.max === 'number' ? data.players.max : '?';
-            }
-
-            // Zeige Spielerliste an, falls vorhanden
-            if (playerListContainer && data.players && data.players.sample && data.players.sample.length > 0) {
-                playerListContainer.innerHTML = '';
-                const playerList = document.createElement('div');
-                playerList.className = 'player-list';
-
-                const heading = document.createElement('h3');
-                heading.textContent = 'Aktive Spieler';
-                playerList.appendChild(heading);
-
-                const list = document.createElement('ul');
-                data.players.sample.forEach(player => {
-                    const item = document.createElement('li');
-                    item.className = 'player-item';
-                    const playerHead = document.createElement('img');
-                    playerHead.src = `https://crafatar.com/avatars/${player.id}?size=24&overlay`;
-                    playerHead.alt = player.name;
-                    playerHead.className = 'player-head';
-                    item.appendChild(playerHead);
-
-                    const playerName = document.createElement('span');
-                    playerName.textContent = player.name;
-                    item.appendChild(playerName);
-
-                    list.appendChild(item);
-                });
-                playerList.appendChild(list);
-                playerListContainer.appendChild(playerList);
-                playerListContainer.style.display = 'block';
-            } else if (playerListContainer) {
-                playerListContainer.style.display = 'none';
-            }
-        } else {
-            statusText.textContent = 'Offline';
-            statusText.style.color = '#ff0023';
-            if (statusIndicator) {
-                statusIndicator.style.display = 'inline-block';
-                statusIndicator.style.background = '#ff0023';
-                statusIndicator.style.boxShadow = '0 0 10px #ff0023';
-                statusIndicator.style.width = '12px';
-                statusIndicator.style.height = '12px';
-                statusIndicator.style.borderRadius = '50%';
-                statusIndicator.style.marginRight = '8px';
-            }
-            if (playersOnline && playersMax) {
-                playersOnline.textContent = '0';
-                playersMax.textContent = '?';
-            }
-            if (playerListContainer) {
-                playerListContainer.style.display = 'none';
-            }
-        }
-    })
-    .catch(() => {
-        // Fallback zur mcsrvstat.us API
-        fetch('https://api.mcsrvstat.us/2/mac-netzwerk.net')
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.online) {
-                    statusText.textContent = `Online`;
-                    statusText.style.color = '#27c93f';
-                    if (statusIndicator) {
-                        statusIndicator.style.display = 'inline-block';
-                        statusIndicator.style.background = '#27c93f';
-                        statusIndicator.style.boxShadow = '0 0 10px #27c93f';
-                        statusIndicator.style.width = '12px';
-                        statusIndicator.style.height = '12px';
-                        statusIndicator.style.borderRadius = '50%';
-                        statusIndicator.style.marginRight = '8px';
-                    }
-                    if (playersOnline && playersMax) {
-                        playersOnline.textContent = data.players && typeof data.players.online === 'number' ? data.players.online : '?';
-                        playersMax.textContent = data.players && typeof data.players.max === 'number' ? data.players.max : '?';
-                    }
-
-                    // Zeige Spielerliste an, falls vorhanden
-                    if (playerListContainer && data.players && data.players.list && data.players.list.length > 0) {
-                        playerListContainer.innerHTML = '';
-                        const playerList = document.createElement('div');
-                        playerList.className = 'player-list';
-
-                        const heading = document.createElement('h3');
-                        heading.textContent = 'Aktive Spieler';
-                        playerList.appendChild(heading);
-
-                        const list = document.createElement('ul');
-                        data.players.list.forEach(playerName => {
-                            const item = document.createElement('li');
-                            item.className = 'player-item';
-                            item.textContent = playerName;
-                            list.appendChild(item);
-                        });
-                        playerList.appendChild(list);
-                        playerListContainer.appendChild(playerList);
-                        playerListContainer.style.display = 'block';
-                    } else if (playerListContainer) {
-                        playerListContainer.style.display = 'none';
-                    }
-                } else {
-                    statusText.textContent = 'Offline';
-                    statusText.style.color = '#ff0023';
-                    if (statusIndicator) {
-                        statusIndicator.style.display = 'inline-block';
-                        statusIndicator.style.background = '#ff0023';
-                        statusIndicator.style.boxShadow = '0 0 10px #ff0023';
-                        statusIndicator.style.width = '12px';
-                        statusIndicator.style.height = '12px';
-                        statusIndicator.style.borderRadius = '50%';
-                        statusIndicator.style.marginRight = '8px';
-                    }
-                    if (playersOnline && playersMax) {
-                        playersOnline.textContent = '0';
-                        playersMax.textContent = '?';
-                    }
-                    if (playerListContainer) {
-                        playerListContainer.style.display = 'none';
-                    }
-                }
-            })
-            .catch(() => {
-                statusText.textContent = 'Status nicht verfügbar';
-                statusText.style.color = '#888';
+    // Verwende mcsrvstat.us API
+    fetch('https://api.mcsrvstat.us/2/mac-netzwerk.net')
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.online) {
+                statusText.textContent = `Online`;
+                statusText.style.color = '#27c93f';
                 if (statusIndicator) {
-                    statusIndicator.style.display = 'none';
+                    statusIndicator.style.display = 'inline-block';
+                    statusIndicator.style.background = '#27c93f';
+                    statusIndicator.style.boxShadow = '0 0 10px #27c93f';
+                    statusIndicator.style.width = '12px';
+                    statusIndicator.style.height = '12px';
+                    statusIndicator.style.borderRadius = '50%';
+                    statusIndicator.style.marginRight = '8px';
                 }
                 if (playersOnline && playersMax) {
-                    playersOnline.textContent = '?';
+                    playersOnline.textContent = data.players && typeof data.players.online === 'number' ? data.players.online : '?';
+                    playersMax.textContent = data.players && typeof data.players.max === 'number' ? data.players.max : '?';
+                }
+
+                // Zeige Spielerliste an, falls vorhanden
+                if (playerListContainer && data.players && data.players.list && data.players.list.length > 0) {
+                    playerListContainer.innerHTML = '';
+                    const playerList = document.createElement('div');
+                    playerList.className = 'player-list';
+
+                    const heading = document.createElement('h3');
+                    heading.textContent = 'Aktive Spieler';
+                    playerList.appendChild(heading);
+
+                    const list = document.createElement('ul');
+                    data.players.list.forEach(playerName => {
+                        const item = document.createElement('li');
+                        item.className = 'player-item';
+                        item.textContent = playerName;
+                        list.appendChild(item);
+                    });
+                    playerList.appendChild(list);
+                    playerListContainer.appendChild(playerList);
+                    playerListContainer.style.display = 'block';
+                } else if (playerListContainer) {
+                    playerListContainer.style.display = 'none';
+                }
+            } else {
+                statusText.textContent = 'Offline';
+                statusText.style.color = '#ff0023';
+                if (statusIndicator) {
+                    statusIndicator.style.display = 'inline-block';
+                    statusIndicator.style.background = '#ff0023';
+                    statusIndicator.style.boxShadow = '0 0 10px #ff0023';
+                    statusIndicator.style.width = '12px';
+                    statusIndicator.style.height = '12px';
+                    statusIndicator.style.borderRadius = '50%';
+                    statusIndicator.style.marginRight = '8px';
+                }
+                if (playersOnline && playersMax) {
+                    playersOnline.textContent = '0';
                     playersMax.textContent = '?';
                 }
                 if (playerListContainer) {
                     playerListContainer.style.display = 'none';
                 }
-            });
-    });
+            }
+        })
+        .catch(() => {
+            statusText.textContent = 'Status nicht verfügbar';
+            statusText.style.color = '#888';
+            if (statusIndicator) {
+                statusIndicator.style.display = 'none';
+            }
+            if (playersOnline && playersMax) {
+                playersOnline.textContent = '?';
+                playersMax.textContent = '?';
+            }
+            if (playerListContainer) {
+                playerListContainer.style.display = 'none';
+            }
+        });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -396,6 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const paymentMessage = document.getElementById('payment-message');
+    // Stripe payment functionality would go here but is not currently implemented
+});
 
 // --- Cookie Banner Script ---
 document.addEventListener('DOMContentLoaded', function() {
@@ -525,7 +432,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     checkSmpAuthAndShowForm();
 });
-// --- Registrierung/Login Sichtbarkeit für SMP-Formular ---
+// --- Abo Payment Method Display (Profile Page) ---
+// This section is incomplete in the original code and has been commented out to prevent syntax errors
+/*
 document.addEventListener('DOMContentLoaded', async function() {
         // ...existing code...
         const paymentMethodEl = document.getElementById('aboPaymentMethod');
@@ -565,3 +474,4 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         // ...existing code...
     });
+*/
