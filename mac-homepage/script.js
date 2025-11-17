@@ -12,7 +12,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                     block: 'start'
                 });
             }
-        } else { // Target is on another page (e.g., smp.html#hash)
+        } else { // Target is on another page
             window.location.href = this.href;
         }
     });
@@ -288,19 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
             dropdown.innerHTML = `
                 <ul>
                     <li class="profile-link" id="profileMenuProfile">Profil</li>
-                    <li class="profile-link" id="profileMenuSubscription">Abonnement</li>
                     <li class="profile-link logout-link" id="profileMenuLogout">Abmelden</li>
                 </ul>
             `;
             userInfoDiv.appendChild(dropdown);
 
-            // Menüeinträge: Profil/Abonnement/Abmelden
+            // Menüeinträge: Profil/Abmelden
             document.getElementById('profileMenuLogout').addEventListener('click', showLogoutModal);
             document.getElementById('profileMenuProfile').addEventListener('click', function() {
                 window.location.href = '/profile';
-            });
-            document.getElementById('profileMenuSubscription').addEventListener('click', function() {
-                window.location.href = '/abo';
             });
         }
     }
@@ -400,88 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const paymentMessage = document.getElementById('payment-message');
-    if (registrationForm) {
-        registrationForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            paymentMessage.textContent = ''; // Clear previous messages
-
-            const minecraftUsername = document.getElementById('minecraftUsername').value;
-            const agbChecked = document.getElementById('agb').checked;
-            const payWithGuthaben = document.getElementById('payWithGuthaben')?.checked;
-
-            // Neue Logik: Zahlungsmethode auslesen
-            const zahlungsmethode = document.querySelector('input[name="zahlungsmethode"]:checked')?.value || 'stripe';
-
-            if (!agbChecked) {
-                paymentMessage.textContent = 'Bitte stimme den AGB und der Datenschutzerklärung zu.';
-                return;
-            }
-
-            if (!minecraftUsername) {
-                paymentMessage.textContent = 'Bitte gib deinen Minecraft-Username an.';
-                return;
-            }
-
-            try {
-                if (zahlungsmethode === 'guthaben') {
-                    // Registrierung mit Guthaben
-                    const response = await fetch('/api/register-guthaben', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ minecraftUsername, zahlungsmethode })
-                    });
-                    const data = await response.json();
-                    if (response.ok && data.success) {
-                        paymentMessage.textContent = 'Erfolgreich mit Guthaben registriert! Du bist jetzt freigeschaltet.';
-                    } else {
-                        paymentMessage.textContent = data.error || 'Registrierung mit Guthaben fehlgeschlagen.';
-                    }
-                    return;
-                }
-
-                // 1. Create a checkout session auf dem Server
-                const response = await fetch('/create-checkout-session', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ minecraftUsername, zahlungsmethode }),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    paymentMessage.textContent = errorData.error || 'Fehler bei der Erstellung der Bezahlseite.';
-                    console.error('Server error:', errorData);
-                    return;
-                }
-
-                const sessionData = await response.json();
-                if (!sessionData.url) {
-                    paymentMessage.textContent = 'Fehler: Keine URL für die Bezahlseite erhalten.';
-                    return;
-                }
-                // 2. Redirect to the Stripe Checkout page
-                window.location.href = sessionData.url;
-
-            } catch (error) {
-                paymentMessage.textContent = 'Ein unerwarteter Fehler ist aufgetreten.';
-                console.error('Client-side error:', error);
-            }
-        });
-    }
-
-    // Handle payment status messages from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('payment_success')) {
-        paymentMessage.style.color = 'green';
-        paymentMessage.textContent = 'Zahlung erfolgreich! Du wirst in Kürze für den Server freigeschaltet.';
-    }
-    if (urlParams.has('payment_cancelled')) {
-        paymentMessage.style.color = 'orange';
-        paymentMessage.textContent = 'Die Zahlung wurde abgebrochen. Bitte versuche es erneut.';
-    }
-});
-// --- Stripe Payment Script End ---
 
 // --- Cookie Banner Script ---
 document.addEventListener('DOMContentLoaded', function() {
@@ -494,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="cookie-banner-overlay"></div>
             <div class="cookie-banner-center">
                 <div class="cookie-banner-content">
-                    <span class="cookie-banner-text">Diese Website verwendet Cookies für Login und Zahlungsabwicklung. Mehr dazu in der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>.</span>
+                    <span class="cookie-banner-text">Diese Website verwendet Cookies für Login. Mehr dazu in der <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>.</span>
                     <button id="acceptCookiesBtn" class="cookie-banner-btn">Verstanden</button>
                 </div>
             </div>
