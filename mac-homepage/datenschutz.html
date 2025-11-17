@@ -5,19 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Datenschutzerklärung | MAC-Netzwerk</title>
     <link rel="icon" type="image/png" href="logos/favicon-32x32.png">
-    <!-- Standard Favicons -->
     <link rel="icon" href="logos/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="logos/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="logos/favicon-32x32.png">
-
-    <!-- Apple Touch Icon (iOS/Safari) -->
     <link rel="apple-touch-icon" sizes="180x180" href="logos/apple-touch-icon.png">
-
-    <!-- Android Chrome -->
     <link rel="icon" type="image/png" sizes="192x192" href="logos/android-chrome-192x192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="logos/android-chrome-512x512.png">
-
-    <!-- Theme Color fÃ¼r MAC-Netzwerk -->
     <meta name="theme-color" content="#ff0023">
     <meta name="msapplication-TileColor" content="#ff0023">
     <link rel="stylesheet" href="style.css">
@@ -25,31 +18,26 @@
 <body>
     <nav id="navbar">
         <div class="nav-container">
-            <a href="https://mac-netzwerk.net" class="logo">MAC-Netzwerk</a>
+            <a href="index.html" class="logo">MAC-Netzwerk</a>
             <ul class="nav-links">
                 <li><a href="index.html#home">Home</a></li>
                 <li><a href="index.html#server">Server</a></li>
-                <li><a href="https://mac-netzwerk.net/smp#regeln">Regeln</a></li>
-                <li><a href="https://mac-netzwerk.net/smp#mac-smp-registrierung">MAC-SMP Registrierung</a></li>
-                <li><a href="https://mac-netzwerk.net/status">Status</a></li>
+                <li><a href="status.html">Status</a></li>
+                <li><a href="profile.html">Profil</a></li>
+                <li><a href="index.html#spenden">Spenden</a></li>
                 <li><a href="index.html#kontakt">Kontakt</a></li>
                 <li><a href="index.html#impressum">Impressum</a></li>
-                <li><a href="https://panel.mac-netzwerk.net/">Panel</a></li>
             </ul>
-            <!-- Auth Section Start -->
             <div class="auth-section">
-                <!-- Logged out state -->
-                <a href="https://mac-netzwerk.net/login" class="btn-discord-login" id="discordLoginBtn" style="display: none;">
+                <a href="/login" class="btn-discord-login" id="discordLoginBtn" style="display: none;">
                     <img src="https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d7f4ef6498ac018f2c55_Symbol.svg" alt="Discord Logo" width="20" height="20">
                     Login mit Discord
                 </a>
-                <!-- Logged in state (initially hidden) -->
                 <div class="user-info" id="userInfo" style="display: none;">
                     <img src="" alt="Avatar" class="avatar" id="userAvatar">
                     <span class="username" id="userName"></span>
                 </div>
             </div>
-            <!-- Auth Section End -->
             <div class="mobile-menu">
                 <span></span>
                 <span></span>
@@ -62,99 +50,29 @@
         <div class="impressum" style="max-width: 800px; margin: 0 auto;">
             <h2 class="section-title">Datenschutzerklärung</h2>
             <div class="impressum-content">
-                <p>Verantwortlicher im Sinne der Datenschutzgesetze, insbesondere der EU-Datenschutzgrundverordnung (DSGVO), ist:</p>
-                <p>Mario Sinnreich<br>
+                <p><strong>Verantwortlicher:</strong><br>
+                Mario Sinnreich<br>
                 Baumgasse 24<br>
                 2333 Leopoldsdorf<br>
                 Österreich<br>
                 E-Mail: mario@mac-netzwerk.net</p>
 
-                <h3>Ihre Betroffenenrechte</h3>
-                <p>Unter den angegebenen Kontaktdaten unseres Datenschutzbeauftragten können Sie jederzeit folgende Rechte ausüben:</p>
-                <ul>
-                    <li>Auskunft über Ihre bei uns gespeicherten Daten und deren Verarbeitung (Art. 15 DSGVO),</li>
-                    <li>Berichtigung unrichtiger personenbezogener Daten (Art. 16 DSGVO),</li>
-                    <li>Löschung Ihrer bei uns gespeicherten Daten (Art. 17 DSGVO),</li>
-                    <li>Einschränkung der Datenverarbeitung, sofern wir Ihre Daten aufgrund gesetzlicher Pflichten noch nicht löschen dürfen (Art. 18 DSGVO),</li>
-                    <li>Widerspruch gegen die Verarbeitung Ihrer Daten bei uns (Art. 21 DSGVO) und</li>
-                    <li>Datenübertragbarkeit, sofern Sie in die Datenverarbeitung eingewilligt haben oder einen Vertrag mit uns abgeschlossen haben (Art. 20 DSGVO).</li>
-                </ul>
-                <p>Sofern Sie uns eine Einwilligung erteilt haben, können Sie diese jederzeit mit Wirkung für die Zukunft widerrufen.</p>
-                <p>Sie können sich jederzeit mit einer Beschwerde an eine Aufsichtsbehörde wenden, z. B. an die zuständige Aufsichtsbehörde des Bundeslands Ihres Wohnsitzes oder an die für uns als verantwortliche Stelle zuständige Behörde (Österreichische Datenschutzbehörde, www.dsb.gv.at).</p>
+                <h3>Datenverarbeitung</h3>
+                <p>Wir verarbeiten personenbezogene Daten nur, soweit dies für die Bereitstellung des Minecraft-Servers erforderlich ist. Dies umfasst Minecraft-Usernamen und gegebenenfalls Discord-Kontoinformationen bei der Anmeldung.</p>
 
-                <h3>Erfassung allgemeiner Informationen beim Besuch unserer Website</h3>
-                <h4>Art und Zweck der Verarbeitung:</h4>
-                <p>Wenn Sie auf unsere Website zugreifen, d.h., wenn Sie sich nicht registrieren oder anderweitig Informationen übermitteln, werden automatisch Informationen allgemeiner Natur erfasst. Diese Informationen (Server-Logfiles) beinhalten etwa die Art des Webbrowsers, das verwendete Betriebssystem, den Domainnamen Ihres Internet-Service-Providers, Ihre IP-Adresse und ähnliches.</p>
-                <p>Sie werden insbesondere zu folgenden Zwecken verarbeitet:</p>
-                <ul>
-                    <li>Sicherstellung eines problemlosen Verbindungsaufbaus der Website,</li>
-                    <li>Sicherstellung einer reibungslosen Nutzung unserer Website,</li>
-                    <li>Auswertung der Systemsicherheit und -stabilität sowie</li>
-                    <li>zur Optimierung unserer Website.</li>
-                </ul>
-                <p>Wir verwenden Ihre Daten nicht, um Rückschlüsse auf Ihre Person zu ziehen. Informationen dieser Art werden von uns ggfs. anonymisiert statistisch ausgewertet, um unseren Internetauftritt und die dahinterstehende Technik zu optimieren.</p>
-                <h4>Rechtsgrundlage und berechtigtes Interesse:</h4>
-                <p>Die Verarbeitung erfolgt gemäß Art. 6 Abs. 1 lit. f DSGVO auf Basis unseres berechtigten Interesses an der Verbesserung der Stabilität und Funktionalität unserer Website.</p>
-                <h4>Empfänger:</h4>
-                <p>Empfänger der Daten sind ggf. technische Dienstleister, die für den Betrieb und die Wartung unserer Webseite als Auftragsverarbeiter tätig werden.</p>
-                <h4>Speicherdauer:</h4>
-                <p>Die Daten werden gelöscht, sobald diese für den Zweck der Erhebung nicht mehr erforderlich sind. Dies ist für die Daten, die der Bereitstellung der Webseite dienen, grundsätzlich der Fall, wenn die jeweilige Sitzung beendet ist.</p>
-
-                <h3>Registrierung auf unserer Webseite (für MAC-SMP)</h3>
-                <h4>Art und Zweck der Verarbeitung:</h4>
-                <p>Bei der Registrierung für die Nutzung unserer personalisierten Leistungen (Zugang zum MAC-SMP Server) werden einige personenbezogene Daten erhoben, wie Minecraft-Username und E-Mail-Adresse. Für die Abwicklung der Zahlung werden Zahlungsdaten (z.B. über Stripe) verarbeitet.</p>
-                <p>Sind Sie bei uns registriert, können Sie auf Inhalte und Leistungen zugreifen, die wir nur registrierten Nutzern anbieten. Angemeldete Nutzer haben zudem die Möglichkeit, bei Bedarf die bei Registrierung angegebenen Daten jederzeit zu ändern oder zu löschen. Selbstverständlich erteilen wir Ihnen darüber hinaus jederzeit Auskunft über die von uns über Sie gespeicherten personenbezogenen Daten.</p>
-                <h4>Rechtsgrundlage:</h4>
-                <p>Die Verarbeitung der bei der Registrierung eingegebenen Daten erfolgt auf Grundlage einer Einwilligung des Nutzers (Art. 6 Abs. 1 lit. a DSGVO) sowie zur Durchführung des Nutzungsvertrags (Art. 6 Abs. 1 lit. b DSGVO).</p>
-                <h4>Empfänger:</h4>
-                <p>Empfänger der Daten sind ggf. technische Dienstleister (z.B. Hosting-Provider) und Zahlungsdienstleister (z.B. Stripe), die für den Betrieb und die Wartung unserer Webseite und die Zahlungsabwicklung als Auftragsverarbeiter tätig werden.</p>
-                <h4>Speicherdauer:</h4>
-                <p>Daten werden in diesem Zusammenhang nur verarbeitet, solange die entsprechende Einwilligung vorliegt oder sie für die Vertragserfüllung notwendig sind und keine gesetzlichen Aufbewahrungspflichten entgegenstehen. Nach Kündigung des Nutzungsvertrags werden die Daten unter Berücksichtigung gesetzlicher Aufbewahrungsfristen gelöscht.</p>
-
-                <h3>Zahlungsabwicklung (Stripe)</h3>
-                <p>Für die Abwicklung von Zahlungen nutzen wir externe Zahlungsdienstleister. Die Verarbeitung Ihrer Zahlungsdaten (z.B. Name, Zahlungsbetrag, Kontodetails, Kreditkartennummer) erfolgt durch den jeweiligen Zahlungsdienstleister zum Zweck der Zahlungsabwicklung. Für diese Transaktionen gelten die jeweiligen Vertrags- und Datenschutzbestimmungen der Zahlungsdienstleister.</p>
-                <p>Informationen zum Datenschutz bei Stripe finden Sie unter: <a href="https://stripe.com/at/privacy" target="_blank">https://stripe.com/at/privacy</a></p>
-
-                <h3>Kommunikation per E-Mail</h3>
-                <h4>Art und Zweck der Verarbeitung:</h4>
-                <p>Treten Sie bzgl. Fragen jeglicher Art per E-Mail oder Kontaktformular mit uns in Kontakt, erteilen Sie uns zum Zwecke der Kontaktaufnahme Ihre freiwillige Einwilligung. Hierfür ist die Angabe einer validen E-Mail-Adresse erforderlich. Diese dient der Zuordnung der Anfrage und der anschließenden Beantwortung derselben. Die Angabe weiterer Daten ist optional.</p>
-                <h4>Rechtsgrundlage:</h4>
-                <p>Die Verarbeitung der in das Kontaktformular eingegebenen Daten oder per E-Mail gesendeten Daten erfolgt auf der Grundlage eines berechtigten Interesses (Art. 6 Abs. 1 lit. f DSGVO) oder, falls ein Vertragsabschluss bezweckt wird, zur Durchführung vorvertraglicher Maßnahmen (Art. 6 Abs. 1 lit. b DSGVO).</p>
-                <h4>Empfänger:</h4>
-                <p>Empfänger der Daten sind ggf. interne Stellen und technische Dienstleister für den Betrieb der E-Mail-Infrastruktur.</p>
-                <h4>Speicherdauer:</h4>
-                <p>Daten werden spätestens 6 Monate nach Bearbeitung der Anfrage gelöscht, sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen.</p>
-
-                <h3>Änderung unserer Datenschutzbestimmungen</h3>
-                <p>Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit sie stets den aktuellen rechtlichen Anforderungen entspricht oder um Änderungen unserer Leistungen in der Datenschutzerklärung umzusetzen, z.B. bei der Einführung neuer Services. Für Ihren erneuten Besuch gilt dann die neue Datenschutzerklärung.</p>
-
-                <h3>Fragen an den Datenschutzbeauftragten</h3>
-                <p>Wenn Sie Fragen zum Datenschutz haben, schreiben Sie uns bitte eine E-Mail oder wenden Sie sich direkt an die für den Datenschutz verantwortliche Person in unserer Organisation:</p>
-                <p>Mario Sinnreich (Kontaktdaten siehe oben)</p>
-                <p><em>Stand: Juni 2025</em></p>
+                <h3>Ihre Rechte</h3>
+                <p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung Ihrer personenbezogenen Daten. Kontaktieren Sie uns unter mario@mac-netzwerk.net.</p>
             </div>
         </div>
     </section>
 
-    <!-- Logout Confirmation Modal -->
-    <div id="logoutConfirmationModal" class="modal-overlay">
-        <div class="modal-content">
-            <p>Bist du sicher, dass du dich abmelden möchtest?</p>
-            <div class="modal-actions">
-                <button id="confirmLogoutBtn" class="btn btn-danger">Ja, abmelden</button>
-                <button id="cancelLogoutBtn" class="btn btn-secondary">Abbrechen</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
     <footer>
         <div class="footer-links">
             <a href="index.html#impressum">Impressum</a>
             <a href="agb.html" target="_blank">AGB</a>
             <a href="datenschutz.html" target="_blank">Datenschutz</a>
             <a href="mailto:mario@mac-netzwerk.net">Kontakt</a>
-            <a href="https://discord.gg/FusjxDz7yb" target="_blank">Discord</a>
+            <a href="https://discord.gg/fXbbnRh5gY" target="_blank">Discord</a>
         </div>
         <p>&copy; 2025 MAC-Netzwerk | Entwickelt von Mario Sinnreich | Wien, Österreich</p>
     </footer>
