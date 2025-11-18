@@ -325,6 +325,8 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const registrationForm = document.getElementById('registrationForm');
     const paymentMessage = document.getElementById('payment-message');
+    // ...existing code...
+});
 
 // --- Cookie Banner Script ---
 document.addEventListener('DOMContentLoaded', function() {
