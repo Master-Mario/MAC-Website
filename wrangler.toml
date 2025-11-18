@@ -1,4 +1,4 @@
-name = "mac-login-worker"
+name = "mac-homepage"
 main = "worker.js"
 compatibility_date = "2024-06-01"
 assets = { directory = "./mac-homepage", binding = "ASSETS", html_handling = "drop-trailing-slash", not_found_handling = "404-page" }
